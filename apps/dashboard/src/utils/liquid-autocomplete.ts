@@ -12,7 +12,7 @@ interface CompletionOption {
 // Novu JIT namespaces
 const PAYLOAD_NAMESPACE = 'payload';
 const SUBSCRIBER_DATA_NAMESPACE = 'subscriber.data';
-const STEP_PAYLOAD_REGEX = /^steps\.[^.]+\.events\[\d+\]\.payload/;
+const STEP_PAYLOAD_REGEX = /^steps\.[a-zA-Z0-9_-]+\.events/;
 
 /**
  * Liquid variable autocomplete for the following patterns:
@@ -149,7 +149,7 @@ function getFilterCompletions(afterPipe: string): CompletionOption[] {
 function getMatchingVariables(searchText: string, variables: LiquidVariable[]): LiquidVariable[] {
   if (!searchText) return variables;
 
-  const searchLower = searchText.toLowerCase();
+  const searchTextTrimmed = searchText.trim();
 
   // Handle dot endings
   if (searchText.endsWith('.')) {
@@ -161,24 +161,33 @@ function getMatchingVariables(searchText: string, variables: LiquidVariable[]): 
   const stepPayloadNamespaces = variables.reduce<string[]>((acc, variableItem) => {
     const match = variableItem.name.match(STEP_PAYLOAD_REGEX);
 
-    if (match) {
-      acc.push(match[0]);
+    const withPayload = match ? `${match[0]}.payload` : null;
+
+    if (withPayload && !acc.includes(withPayload)) {
+      acc.push(withPayload);
     }
 
     return acc;
   }, []);
 
+  console.log('stepPayloadNamespaces', stepPayloadNamespaces);
+
   // Create JIT variables based on the search text e.g. payload.foo, subscriber.data.foo, steps.digest-step.events[0].payload.foo
   const jitVariables = [PAYLOAD_NAMESPACE, SUBSCRIBER_DATA_NAMESPACE, ...stepPayloadNamespaces].reduce<
     LiquidVariable[]
   >((acc, namespace) => {
+    // If the user is typing steps.*, don't suggest any variables like payload.steps.digest-step.events
+    if (searchText.startsWith('steps.')) {
+      return acc;
+    }
+
     if (searchText.startsWith(namespace) && searchText !== namespace) {
       // Ensure that if the user types payload.foo the first suggestion is payload.foo
       acc.push({ name: searchText, type: 'variable' });
     } else if (!searchText.startsWith(namespace)) {
       // For all other values, suggest payload.whatever, subscriber.data.whatever
       acc.push({
-        name: `${namespace}.${searchLower.trim()}`,
+        name: `${namespace}.${searchText.trim()}`,
         type: 'variable',
       });
     }
@@ -194,56 +203,6 @@ function getMatchingVariables(searchText: string, variables: LiquidVariable[]): 
   // Show any variables containing the search text in the variable name (not the filters)
   return uniqueVariables.filter((v) => {
     const namePartWithoutFilters = v.name.split('|')[0].trim();
-    return namePartWithoutFilters.toLowerCase().includes(searchLower);
+    return namePartWithoutFilters.includes(searchTextTrimmed);
   });
-}
-
-export function createAutocompleteSource(
-  variables: LiquidVariable[],
-  onVariableSelect?: (completion: Completion) => void
-) {
-  return (context: CompletionContext) => {
-    // Match text that starts with {{ and capture everything after it until the cursor position
-    const word = context.matchBefore(/\{\{([^}]*)/);
-    if (!word) return null;
-
-    const options = completions(variables)(context);
-    if (!options) return null;
-
-    const { from, to } = options;
-
-    return {
-      from,
-      to,
-      options: options.options.map((option) => ({
-        ...option,
-        apply: (view: EditorView, completion: Completion, from: number, to: number) => {
-          const selectedValue = completion.label;
-
-          const content = view.state.doc.toString();
-          const beforeCursor = content.slice(0, from);
-          const afterCursor = content.slice(to);
-
-          // Ensure proper {{ }} wrapping
-          const needsOpening = !beforeCursor.endsWith('{{');
-          const needsClosing = !afterCursor.startsWith('}}');
-
-          const wrappedValue = `${needsOpening ? '{{' : ''}${selectedValue}${needsClosing ? '}}' : ''}`;
-
-          // Calculate the final cursor position
-          // Add 2 if we need to account for closing brackets
-          const finalCursorPos = from + wrappedValue.length + (needsClosing ? 0 : 2);
-
-          onVariableSelect?.(completion);
-
-          view.dispatch({
-            changes: { from, to, insert: wrappedValue },
-            selection: { anchor: finalCursorPos },
-          });
-
-          return true;
-        },
-      })),
-    };
-  };
 }
