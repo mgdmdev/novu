@@ -1,11 +1,13 @@
-import { UiSchemaGroupEnum, type UiSchema } from '@novu/shared';
-
+import { EnvironmentTypeEnum, type UiSchema, UiSchemaGroupEnum } from '@novu/shared';
+import { RiInstanceLine } from 'react-icons/ri';
 import { Notification5Fill } from '@/components/icons';
-import { Badge } from '@/components/primitives/badge';
 import { Separator } from '@/components/primitives/separator';
 import { getComponentByType } from '@/components/workflow-editor/steps/component-utils';
 import { InAppTabsSection } from '@/components/workflow-editor/steps/in-app/in-app-tabs-section';
-import { RiInstanceLine } from 'react-icons/ri';
+import { useEnvironment } from '@/context/environment/hooks';
+
+import { cn } from '../../../../utils/ui';
+import { StepEditorUnavailable } from '../step-editor-unavailable';
 
 const avatarKey = 'avatar';
 const subjectKey = 'subject';
@@ -17,6 +19,8 @@ const disableOutputSanitizationKey = 'disableOutputSanitization';
 const dataObjectKey = 'data';
 
 export const InAppEditor = ({ uiSchema }: { uiSchema: UiSchema }) => {
+  const { currentEnvironment } = useEnvironment();
+
   if (uiSchema.group !== UiSchemaGroupEnum.IN_APP) {
     return null;
   }
@@ -32,20 +36,14 @@ export const InAppEditor = ({ uiSchema }: { uiSchema: UiSchema }) => {
     [dataObjectKey]: dataObject,
   } = uiSchema.properties ?? {};
 
+  if (currentEnvironment?.type !== EnvironmentTypeEnum.DEV) {
+    return <StepEditorUnavailable />;
+  }
+
   return (
     <div className="flex flex-col">
-      <InAppTabsSection className="flex flex-col gap-3">
-        <div className={'flex items-center justify-between gap-2.5 text-sm font-medium'}>
-          <div className="flex items-center gap-2.5">
-            <Notification5Fill className="size-3" />
-            <span>In-App template editor</span>
-          </div>
-          {disableOutputSanitization &&
-            getComponentByType({
-              component: disableOutputSanitization.component,
-            })}
-        </div>
-        <div className="flex flex-col gap-2 rounded-xl border border-neutral-100 p-2">
+      <InAppTabsSection className="flex flex-col gap-3 p-0 pb-3">
+        <div className="flex flex-col gap-2 rounded-xl border border-neutral-100 p-2 bg-bg-weak">
           {(avatar || subject) && (
             <div className="flex gap-2">
               {avatar && getComponentByType({ component: avatar.component })}
@@ -61,23 +59,27 @@ export const InAppEditor = ({ uiSchema }: { uiSchema: UiSchema }) => {
       </InAppTabsSection>
 
       {redirect && (
-        <InAppTabsSection className="pt-0">
+        <InAppTabsSection className="pt-0 p-0 pb-3">
           {getComponentByType({
             component: redirect.component,
           })}
         </InAppTabsSection>
       )}
 
+      <div className="ml-auto flex items-center justify-between gap-2.5 pb-3 text-sm font-medium">
+        {disableOutputSanitization &&
+          getComponentByType({
+            component: disableOutputSanitization.component,
+          })}
+      </div>
+
       {dataObject && (
         <>
           <Separator />
-          <InAppTabsSection className="px-4 pb-0 pt-3">
+          <InAppTabsSection className="px-0 pb-0">
             <div className="flex items-center gap-2.5 text-sm">
               <RiInstanceLine className="size-4" />
               <span>Developers</span>
-              <Badge color="orange" size="sm" variant="lighter">
-                New
-              </Badge>
             </div>
           </InAppTabsSection>
         </>
@@ -85,7 +87,7 @@ export const InAppEditor = ({ uiSchema }: { uiSchema: UiSchema }) => {
 
       {dataObject && (
         <>
-          <InAppTabsSection className="pb-0 pt-3">
+          <InAppTabsSection className="px-0 pb-3">
             {getComponentByType({
               component: dataObject.component,
             })}

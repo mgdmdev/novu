@@ -1,7 +1,7 @@
-import { ApiRateLimitCategoryEnum, ApiRateLimitCostEnum, ApiServiceLevelEnum } from '@novu/shared';
-import { expect } from 'chai';
 import { HttpResponseHeaderKeysEnum } from '@novu/application-generic';
+import { ApiRateLimitCategoryEnum, ApiRateLimitCostEnum, ApiServiceLevelEnum } from '@novu/shared';
 import { UserSession } from '@novu/testing';
+import { expect } from 'chai';
 
 const mockSingleCost = 1;
 const mockBulkCost = 5;
@@ -22,11 +22,13 @@ process.env.API_RATE_LIMIT_MAXIMUM_UNLIMITED_TRIGGER = `${mockMaximumUnlimitedTr
 process.env.API_RATE_LIMIT_MAXIMUM_UNLIMITED_GLOBAL = `${mockMaximumUnlimitedGlobal}`;
 
 // Disable Launch Darkly to allow test to define FF state
+// @ts-expect-error
 process.env.LAUNCH_DARKLY_SDK_KEY = '';
 
 describe('API Rate Limiting #novu-v2', () => {
   let session: UserSession;
   const pathPrefix = '/v1/rate-limiting';
+
   let request: (
     path: string,
     authHeader?: string
@@ -34,10 +36,12 @@ describe('API Rate Limiting #novu-v2', () => {
 
   describe('Guard logic', () => {
     beforeEach(async () => {
+      // @ts-expect-error
       process.env.IS_API_RATE_LIMITING_ENABLED = 'true';
 
       session = new UserSession();
       await session.initialize();
+      await session.updateOrganizationServiceLevel(ApiServiceLevelEnum.UNLIMITED);
 
       request = (path: string, authHeader = `ApiKey ${session.apiKey}`) =>
         session.testAgent.get(path).set('authorization', authHeader);
@@ -45,6 +49,7 @@ describe('API Rate Limiting #novu-v2', () => {
 
     describe('Feature Flag', () => {
       it('should set rate limit headers when the Feature Flag is enabled', async () => {
+        // @ts-expect-error
         process.env.IS_API_RATE_LIMITING_ENABLED = 'true';
         const response = await request(`${pathPrefix}/no-category-no-cost`);
 
@@ -52,6 +57,7 @@ describe('API Rate Limiting #novu-v2', () => {
       });
 
       it('should NOT set rate limit headers when the Feature Flag is disabled', async () => {
+        // @ts-expect-error
         process.env.IS_API_RATE_LIMITING_ENABLED = 'false';
         const response = await request(`${pathPrefix}/no-category-no-cost`);
 
@@ -188,6 +194,9 @@ describe('API Rate Limiting #novu-v2', () => {
         expectedCost: mockSingleCost * 1,
         expectedReset: 1,
         expectedThrottledRequests: 0,
+        async setupTest(userSession) {
+          await userSession.updateOrganizationServiceLevel(ApiServiceLevelEnum.UNLIMITED);
+        },
       },
       {
         name: 'no category no cost endpoint request',
@@ -197,6 +206,9 @@ describe('API Rate Limiting #novu-v2', () => {
         expectedCost: mockSingleCost * 1,
         expectedReset: 1,
         expectedThrottledRequests: 0,
+        async setupTest(userSession) {
+          await userSession.updateOrganizationServiceLevel(ApiServiceLevelEnum.UNLIMITED);
+        },
       },
       {
         name: 'single trigger request with service level specified on organization ',
@@ -219,6 +231,7 @@ describe('API Rate Limiting #novu-v2', () => {
         expectedReset: 1,
         expectedThrottledRequests: 0,
         async setupTest(userSession) {
+          await userSession.updateOrganizationServiceLevel(ApiServiceLevelEnum.UNLIMITED);
           await userSession.updateEnvironmentApiRateLimits({ [ApiRateLimitCategoryEnum.TRIGGER]: 60 });
         },
       },
@@ -234,6 +247,9 @@ describe('API Rate Limiting #novu-v2', () => {
         expectedReset: 1,
         expectedRetryAfter: 1,
         expectedThrottledRequests: 50,
+        async setupTest(userSession) {
+          await userSession.updateOrganizationServiceLevel(ApiServiceLevelEnum.UNLIMITED);
+        },
       },
     ];
 
@@ -260,6 +276,7 @@ describe('API Rate Limiting #novu-v2', () => {
               const expectedRemaining = Math.max(0, expectedBurstLimit - expectedCost);
 
               before(async () => {
+                // @ts-expect-error
                 process.env.IS_API_RATE_LIMITING_ENABLED = 'true';
 
                 session = new UserSession();
@@ -321,6 +338,8 @@ describe('API Rate Limiting #novu-v2', () => {
           };
         }
       )
-      .forEach((testCase) => testCase());
+      .forEach((testCase) => {
+        testCase();
+      });
   });
 });

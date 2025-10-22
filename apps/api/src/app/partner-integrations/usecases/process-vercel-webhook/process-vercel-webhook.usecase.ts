@@ -1,6 +1,6 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
 import crypto from 'node:crypto';
-
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { PinoLogger } from '@novu/application-generic';
 import {
   CommunityOrganizationRepository,
   CommunityUserRepository,
@@ -8,10 +8,8 @@ import {
   EnvironmentRepository,
   MemberRepository,
 } from '@novu/dal';
-
-import { PinoLogger } from '@novu/application-generic';
-import { ProcessVercelWebhookCommand } from './process-vercel-webhook.command';
 import { Sync } from '../../../bridge/usecases/sync';
+import { ProcessVercelWebhookCommand } from './process-vercel-webhook.command';
 
 @Injectable()
 export class ProcessVercelWebhook {
@@ -85,12 +83,12 @@ export class ProcessVercelWebhook {
         throw new BadRequestException('Environment Not Found');
       }
 
-      const orgAdmin = await this.memberRepository.getOrganizationAdminAccount(environment._organizationId);
-      if (!orgAdmin) {
-        throw new BadRequestException('Organization admin not found');
+      const orgOwner = await this.memberRepository.getOrganizationOwnerAccount(environment._organizationId);
+      if (!orgOwner) {
+        throw new BadRequestException('Organization owner not found');
       }
 
-      const internalUser = await this.communityUserRepository.findOne({ externalId: orgAdmin?._userId });
+      const internalUser = await this.communityUserRepository.findOne({ externalId: orgOwner?._userId });
 
       if (!internalUser) {
         throw new BadRequestException('User not found');

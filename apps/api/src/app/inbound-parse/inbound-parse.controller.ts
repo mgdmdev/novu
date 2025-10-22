@@ -1,19 +1,19 @@
 import { ClassSerializerInterceptor, Controller, Get, UseInterceptors } from '@nestjs/common';
 import { ApiExcludeController, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { UserSessionData } from '@novu/shared';
 import { PinoLogger } from '@novu/application-generic';
+import { UserSessionData } from '@novu/shared';
+import { RequireAuthentication } from '../auth/framework/auth.decorator';
 import { ExternalApiAccessible } from '../auth/framework/external-api.decorator';
-import { UserSession } from '../shared/framework/user.decorator';
-import { GetMxRecord } from './usecases/get-mx-record/get-mx-record.usecase';
-import { GetMxRecordCommand } from './usecases/get-mx-record/get-mx-record.command';
-import { GetMxRecordResponseDto } from './dtos/get-mx-record.dto';
 import { ApiCommonResponses, ApiResponse } from '../shared/framework/response.decorator';
-import { UserAuthentication } from '../shared/framework/swagger/api.key.security';
+import { UserSession } from '../shared/framework/user.decorator';
+import { GetMxRecordResponseDto } from './dtos/get-mx-record.dto';
+import { GetMxRecordCommand } from './usecases/get-mx-record/get-mx-record.command';
+import { GetMxRecord } from './usecases/get-mx-record/get-mx-record.usecase';
 
 @ApiCommonResponses()
 @Controller('/inbound-parse')
 @UseInterceptors(ClassSerializerInterceptor)
-@UserAuthentication()
+@RequireAuthentication()
 @ApiTags('Inbound Parse')
 @ApiExcludeController()
 export class InboundParseController {

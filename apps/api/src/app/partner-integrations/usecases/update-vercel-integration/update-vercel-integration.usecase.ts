@@ -1,6 +1,6 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable, BadRequestException } from '@nestjs/common';
-import { lastValueFrom } from 'rxjs';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { AnalyticsService, decryptApiKey, PinoLogger } from '@novu/application-generic';
 import {
   CommunityUserRepository,
   EnvironmentEntity,
@@ -8,10 +8,9 @@ import {
   MemberRepository,
   OrganizationRepository,
 } from '@novu/dal';
-import { AnalyticsService, decryptApiKey, PinoLogger } from '@novu/application-generic';
-
-import { UpdateVercelIntegrationCommand } from './update-vercel-integration.command';
+import { lastValueFrom } from 'rxjs';
 import { Sync } from '../../../bridge/usecases/sync';
+import { UpdateVercelIntegrationCommand } from './update-vercel-integration.command';
 
 interface ISetEnvironment {
   name: string;
@@ -144,12 +143,12 @@ export class UpdateVercelIntegration {
         return;
       }
 
-      const orgAdmin = await this.memberRepository.getOrganizationAdminAccount(organizationId);
-      if (!orgAdmin) {
-        throw new BadRequestException('Organization admin not found');
+      const orgOwner = await this.memberRepository.getOrganizationOwnerAccount(organizationId);
+      if (!orgOwner) {
+        throw new BadRequestException('Organization owner not found');
       }
 
-      const internalUser = await this.communityUserRepository.findOne({ externalId: orgAdmin?._userId });
+      const internalUser = await this.communityUserRepository.findOne({ externalId: orgOwner?._userId });
       if (!internalUser) {
         throw new BadRequestException('User not found');
       }

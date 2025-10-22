@@ -1,8 +1,8 @@
 import { NovuError } from './utils/errors';
 
-export { type FiltersCountResponse, type ListNotificationsResponse } from './notifications';
-export type { Notification } from './notifications';
+export type { FiltersCountResponse, ListNotificationsResponse, Notification } from './notifications';
 export type { Preference } from './preferences/preference';
+export type { Schedule } from './preferences/schedule';
 export type { NovuError } from './utils/errors';
 
 declare global {
@@ -54,12 +54,38 @@ export enum WebSocketEvent {
   UNSEEN = 'unseen_count_changed',
 }
 
+export enum SocketType {
+  SOCKET_IO = 'socket.io',
+  PARTY_SOCKET = 'partysocket',
+}
+
+export enum SeverityLevelEnum {
+  HIGH = 'high',
+  MEDIUM = 'medium',
+  LOW = 'low',
+  NONE = 'none',
+}
+
+export enum WorkflowCriticalityEnum {
+  CRITICAL = 'critical',
+  NON_CRITICAL = 'nonCritical',
+  ALL = 'all',
+}
+
+export type UnreadCount = {
+  total: number;
+  severity: Record<SeverityLevelEnum, number>;
+};
+
 export type Session = {
   token: string;
+  /** @deprecated Use unreadCount.total instead */
   totalUnreadCount: number;
+  unreadCount: UnreadCount;
   removeNovuBranding: boolean;
   isDevelopmentMode: boolean;
   maxSnoozeDurationHours: number;
+  applicationIdentifier?: string;
 };
 
 export type Subscriber = {
@@ -97,20 +123,24 @@ export type Workflow = {
   name: string;
   critical: boolean;
   tags?: string[];
+  severity: SeverityLevelEnum;
 };
 
 export type InboxNotification = {
   id: string;
+  transactionId: string;
   subject?: string;
   body: string;
   to: Subscriber;
   isRead: boolean;
+  isSeen: boolean;
   isArchived: boolean;
   isSnoozed: boolean;
   snoozedUntil?: string | null;
   deliveredAt?: string[];
   createdAt: string;
   readAt?: string | null;
+  firstSeenAt?: string | null;
   archivedAt?: string | null;
   avatar?: string;
   primaryAction?: Action;
@@ -120,6 +150,7 @@ export type InboxNotification = {
   data?: NotificationData;
   redirect?: Redirect;
   workflow?: Workflow;
+  severity: SeverityLevelEnum;
 };
 
 export type NotificationFilter = {
@@ -127,6 +158,9 @@ export type NotificationFilter = {
   read?: boolean;
   archived?: boolean;
   snoozed?: boolean;
+  seen?: boolean;
+  data?: Record<string, unknown>;
+  severity?: SeverityLevelEnum | SeverityLevelEnum[];
 };
 
 export type ChannelPreference = {
@@ -145,12 +179,41 @@ export type PaginatedResponse<T = unknown> = {
   page: number;
 };
 
+export type TimeRange = {
+  start: string;
+  end: string;
+};
+
+export type DaySchedule = {
+  isEnabled: boolean;
+  hours?: Array<TimeRange>;
+};
+
+export type WeeklySchedule = {
+  monday?: DaySchedule;
+  tuesday?: DaySchedule;
+  wednesday?: DaySchedule;
+  thursday?: DaySchedule;
+  friday?: DaySchedule;
+  saturday?: DaySchedule;
+  sunday?: DaySchedule;
+};
+
+export type DefaultSchedule = {
+  isEnabled?: boolean;
+  weeklySchedule?: WeeklySchedule;
+};
+
 export type PreferencesResponse = {
   level: PreferenceLevel;
   enabled: boolean;
   channels: ChannelPreference;
   overrides?: IPreferenceOverride[];
   workflow?: Workflow;
+  schedule?: {
+    isEnabled: boolean;
+    weeklySchedule?: WeeklySchedule;
+  };
 };
 
 export enum PreferenceOverrideSourceEnum {
@@ -164,7 +227,6 @@ export type IPreferenceOverride = {
   source: PreferenceOverrideSourceEnum;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type TODO = any;
 
 export type Result<D = undefined, E = NovuError> = Promise<{
@@ -172,7 +234,9 @@ export type Result<D = undefined, E = NovuError> = Promise<{
   error?: E;
 }>;
 
-export type NovuOptions = {
+type KeylessNovuOptions = {} & { [K in string]?: never }; // empty object,disallows all unknown keys
+
+export type StandardNovuOptions = {
   /** @deprecated Use apiUrl instead  */
   backendUrl?: string;
   /** @internal Should be used internally for testing purposes */
@@ -182,6 +246,7 @@ export type NovuOptions = {
   apiUrl?: string;
   socketUrl?: string;
   useCache?: boolean;
+  defaultSchedule?: DefaultSchedule;
 } & (
   | {
       // TODO: Backward compatibility support - remove in future versions (see NV-5801)
@@ -194,5 +259,7 @@ export type NovuOptions = {
       subscriberId?: never;
     }
 );
+
+export type NovuOptions = KeylessNovuOptions | StandardNovuOptions;
 
 export type Prettify<T> = { [K in keyof T]: T[K] } & {};

@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import { Liquid } from 'liquidjs';
+import { describe, expect, it } from 'vitest';
 import { createLiquidEngine, defaultOutputEscape, stringifyDataStructureWithSingleQuotes } from './liquid.utils';
 
 describe('createLiquidEngine', () => {
@@ -38,6 +38,14 @@ describe('createLiquidEngine', () => {
     const data = { count: 1 };
     const result = await engine.parseAndRender(template, data);
     expect(result).toBe('1 other');
+  });
+
+  it('should register the pluralize filter with showCount parameter', async () => {
+    const engine = createLiquidEngine();
+    const template = `{{ count | pluralize: 'activity', 'activities', false }}`;
+    const data = { count: 2 };
+    const result = await engine.parseAndRender(template, data);
+    expect(result).toBe('activities');
   });
 
   it('should correctly handle complex templates with multiple filters', async () => {
@@ -224,9 +232,7 @@ describe('createLiquidEngine', () => {
     const engine = createLiquidEngine();
 
     // Using a simplified template without loops
-    /* eslint-disable no-template-curly-in-string */
     const template = 'Items: {{ payload.items | json }}\nTotal: ${{ payload.total }}';
-    /* eslint-enable no-template-curly-in-string */
 
     const data = {
       payload: {
@@ -278,7 +284,7 @@ describe('createLiquidEngine', () => {
 describe('defaultOutputEscape', () => {
   it('should convert arrays to strings with single quotes', () => {
     // prettier-ignore
-    const array = ["a", "b", "c"];
+    const array = ['a', 'b', 'c'];
 
     const result = defaultOutputEscape(array);
     expect(result).toBe("['a','b','c']");
@@ -286,14 +292,14 @@ describe('defaultOutputEscape', () => {
 
   it('should convert objects to strings with single quotes', () => {
     // prettier-ignore
-    const obj = { a: 1, b: "test" };
+    const obj = { a: 1, b: 'test' };
     const result = defaultOutputEscape(obj);
     expect(result).toBe("{'a':1,'b':'test'}");
   });
 
   it('should handle nested objects and arrays', () => {
     // prettier-ignore
-    const complex = { a: [1, 2], b: { c: "test" } };
+    const complex = { a: [1, 2], b: { c: 'test' } };
     const result = defaultOutputEscape(complex);
     expect(result).toBe("{'a':[1,2],'b':{'c':'test'}}");
   });
@@ -308,7 +314,7 @@ describe('defaultOutputEscape', () => {
     expect(defaultOutputEscape(123)).toBe('123');
     expect(defaultOutputEscape(true)).toBe('true');
     expect(defaultOutputEscape(false)).toBe('false');
-    expect(defaultOutputEscape(null)).toBe('null');
+    expect(defaultOutputEscape(null)).toBe('');
     expect(defaultOutputEscape(undefined)).toBe('');
   });
 });

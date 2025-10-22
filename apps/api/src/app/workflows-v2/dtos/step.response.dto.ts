@@ -1,12 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { ResourceOriginEnum, Slug, StepTypeEnum } from '@novu/shared';
 import { Type } from 'class-transformer';
-import { Slug, StepTypeEnum, WorkflowOriginEnum } from '@novu/shared';
+import { IsEnum, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { JSONSchemaDto } from '../../shared/dtos/json-schema.dto';
 import { ControlsMetadataDto } from './controls-metadata.dto';
-import { JSONSchemaDto } from './json-schema.dto';
 import { StepIssuesDto } from './step-issues.dto';
 
-export class StepResponseDto {
+export class StepResponseDto<T = Record<string, unknown>> {
   @ApiProperty({
     description: 'Controls metadata for the step',
     type: () => ControlsMetadataDto,
@@ -16,9 +16,17 @@ export class StepResponseDto {
   @Type(() => ControlsMetadataDto)
   controls: ControlsMetadataDto;
 
+  @ApiPropertyOptional({
+    description: 'Control values for the step (alias for controls.values)',
+    type: 'object',
+    additionalProperties: true,
+  })
+  controlValues?: T;
+
   @ApiProperty({
-    description: 'JSON Schema for variables',
-    type: () => JSONSchemaDto, // Use arrow function for type
+    description: 'JSON Schema for variables, follows the JSON Schema standard',
+    additionalProperties: true,
+    type: () => Object, // Use arrow function for type
   })
   @ValidateNested() // Consider adding options if needed
   @Type(() => JSONSchemaDto) // Import class-transformer decorator
@@ -36,7 +44,7 @@ export class StepResponseDto {
   @IsString()
   name: string;
 
-  @ApiProperty({ description: 'Slug of the step' })
+  @ApiProperty({ description: 'Slug of the step', type: 'string' })
   @IsString()
   slug: Slug;
 
@@ -50,11 +58,11 @@ export class StepResponseDto {
 
   @ApiProperty({
     description: 'Origin of the step',
-    enum: [...Object.values(WorkflowOriginEnum)],
-    enumName: 'WorkflowOriginEnum',
+    enum: [...Object.values(ResourceOriginEnum)],
+    enumName: 'ResourceOriginEnum',
   })
-  @IsEnum(WorkflowOriginEnum)
-  origin: WorkflowOriginEnum;
+  @IsEnum(ResourceOriginEnum)
+  origin: ResourceOriginEnum;
 
   @ApiProperty({ description: 'Workflow identifier' })
   @IsString()

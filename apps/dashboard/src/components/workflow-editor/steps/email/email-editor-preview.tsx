@@ -1,7 +1,12 @@
-import { ChannelTypeEnum, GeneratePreviewResponseDto } from '@novu/shared';
+import {
+  ChannelTypeEnum,
+  GeneratePreviewResponseDto,
+  ResourceOriginEnum,
+  type WorkflowResponseDto,
+} from '@novu/shared';
+import { TabsContent } from '@radix-ui/react-tabs';
 import { AnimatePresence, motion } from 'motion/react';
 import { useState } from 'react';
-import { cn } from '@/utils/ui';
 import { RiMacLine, RiSmartphoneFill } from 'react-icons/ri';
 
 import { Skeleton } from '@/components/primitives/skeleton';
@@ -15,7 +20,7 @@ import {
   EmailPreviewSubjectMobile,
 } from '@/components/workflow-editor/steps/email/email-preview';
 import { EmailTabsSection } from '@/components/workflow-editor/steps/email/email-tabs-section';
-import { TabsContent } from '@radix-ui/react-tabs';
+import { cn } from '@/utils/ui';
 import { ConfigurePreviewAccordion } from '../shared/configure-preview-accordion';
 
 type EmailEditorPreviewProps = {
@@ -24,6 +29,7 @@ type EmailEditorPreviewProps = {
   previewStep: () => void;
   previewData?: GeneratePreviewResponseDto;
   isPreviewPending: boolean;
+  workflow?: WorkflowResponseDto;
 };
 
 const fadeVariants = {
@@ -37,12 +43,12 @@ export const EmailEditorPreview = ({
   previewStep,
   previewData,
   isPreviewPending = false,
+  workflow,
 }: EmailEditorPreviewProps) => {
   const [activeTab, setActiveTab] = useState('desktop');
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
-      {/* <EmailTabsSection className="flex w-full items-center justify-between"> */}
       <div className="flex w-full items-center justify-between px-4 pb-0 pt-4">
         <EmailPreviewHeader />
         <div>
@@ -93,7 +99,10 @@ export const EmailEditorPreview = ({
                     <div className="w-full bg-neutral-100">
                       <EmailPreviewContentMobile className="mx-auto">
                         <EmailPreviewSubjectMobile subject={previewData.result.preview.subject} />
-                        <EmailPreviewBodyMobile body={previewData.result.preview.body} />
+                        <EmailPreviewBodyMobile
+                          body={previewData.result.preview.body}
+                          resourceOrigin={workflow?.origin ?? ResourceOriginEnum.NOVU_CLOUD}
+                        />
                       </EmailPreviewContentMobile>
                     </div>
                   </TabsContent>
@@ -102,7 +111,11 @@ export const EmailEditorPreview = ({
                       <EmailPreviewSubject subject={previewData.result.preview.subject} />
                     </div>
                     <div className="bg-neutral-50 px-16 py-8">
-                      <EmailPreviewBody body={previewData.result.preview.body} className="bg-background rounded-lg" />
+                      <EmailPreviewBody
+                        body={previewData.result.preview.body}
+                        className="bg-background rounded-lg"
+                        resourceOrigin={workflow?.origin ?? ResourceOriginEnum.NOVU_CLOUD}
+                      />
                     </div>
                   </TabsContent>
                 </>
@@ -114,7 +127,13 @@ export const EmailEditorPreview = ({
         </AnimatePresence>
       </div>
       <div className={cn('px-4 py-3')}>
-        <ConfigurePreviewAccordion editorValue={editorValue} setEditorValue={setEditorValue} onUpdate={previewStep} />
+        <ConfigurePreviewAccordion
+          schema={(previewData as any)?.schema}
+          editorValue={editorValue}
+          setEditorValue={setEditorValue}
+          onUpdate={previewStep}
+          workflow={workflow}
+        />
       </div>
     </Tabs>
   );

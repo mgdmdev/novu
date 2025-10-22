@@ -1,17 +1,19 @@
+import { useOrganization } from '@clerk/clerk-react';
+import { FeatureFlagsKeysEnum } from '@novu/shared';
+import { AnimatePresence } from 'motion/react';
+import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { ActivityFilters } from '@/components/activity/activity-filters';
 import { defaultActivityFilters } from '@/components/activity/constants';
 import { ActivityDetailsDrawer } from '@/components/subscribers/subscriber-activity-drawer';
 import { SubscriberActivityList } from '@/components/subscribers/subscriber-activity-list';
 import { useEnvironment } from '@/context/environment/hooks';
+import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { useFetchActivities } from '@/hooks/use-fetch-activities';
 import { useFetchSubscription } from '@/hooks/use-fetch-subscription';
 import { ActivityFiltersData } from '@/types/activity';
 import { getMaxAvailableActivityFeedDateRange } from '@/utils/activityFilters';
 import { buildRoute, ROUTES } from '@/utils/routes';
-import { useOrganization } from '@clerk/clerk-react';
-import { AnimatePresence } from 'motion/react';
-import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 
 const getInitialFilters = (topicKey: string, dateRange: string): ActivityFiltersData => ({
   channels: [],
@@ -20,12 +22,14 @@ const getInitialFilters = (topicKey: string, dateRange: string): ActivityFilters
   transactionId: '',
   workflows: [],
   topicKey,
+  severity: [],
 });
 
 export const TopicActivity = ({ topicKey }: { topicKey: string }) => {
   const { organization } = useOrganization();
   const { currentEnvironment } = useEnvironment();
   const { subscription } = useFetchSubscription();
+  const isHttpLogsPageEnabled = useFeatureFlag(FeatureFlagsKeysEnum.IS_HTTP_LOGS_PAGE_ENABLED, false);
 
   const maxAvailableActivityFeedDateRange = useMemo(
     () =>
@@ -86,6 +90,10 @@ export const TopicActivity = ({ topicKey }: { topicKey: string }) => {
       params.set('subscriberId', filters.subscriberId);
     }
 
+    if (filters.severity.length > 0) {
+      params.set('severity', filters.severity.join(','));
+    }
+
     return params;
   }, [topicKey, filters]);
 
@@ -103,7 +111,7 @@ export const TopicActivity = ({ topicKey }: { topicKey: string }) => {
             onFiltersChange={setFilters}
             onReset={handleClearFilters}
             hide={['dateRange', 'topicKey']}
-            className="min-h-max overflow-x-auto"
+            className="min-h-max overflow-x-auto px-2.5 pt-2.5"
           />
           <SubscriberActivityList
             isLoading={isLoading}
@@ -116,7 +124,9 @@ export const TopicActivity = ({ topicKey }: { topicKey: string }) => {
             To view more detailed activity, View{' '}
             <Link
               className="underline"
-              to={`${buildRoute(ROUTES.ACTIVITY_FEED, { environmentSlug: currentEnvironment?.slug ?? '' })}?${searchParams.toString()}`}
+              to={`${buildRoute(isHttpLogsPageEnabled ? ROUTES.ACTIVITY_WORKFLOW_RUNS : ROUTES.ACTIVITY_FEED, {
+                environmentSlug: currentEnvironment?.slug ?? '',
+              })}?${searchParams.toString()}`}
             >
               Activity Feed
             </Link>{' '}

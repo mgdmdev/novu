@@ -1,4 +1,5 @@
 {
+  "parallel": 4,
   "targetDefaults": {
     "build": {
       "dependsOn": ["^build"],
@@ -10,12 +11,28 @@
     "lint": {
       "cache": true
     },
-    "@nx/eslint:lint": {
-      "cache": true,
-      "inputs": ["default", "{workspaceRoot}/tools/eslint-rules/**/*"]
+    "lint-biome": {
+      "inputs": ["default", "{workspaceRoot}/biome.json"],
+      "cache": true
     }
   },
-  "extends": "@nx/workspace/presets/npm.json",
+  "namedInputs": {
+    "default": ["{projectRoot}/**/*", "sharedGlobals"],
+    "production": [
+      "default",
+      "!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)?(.snap)",
+      "!{projectRoot}/tsconfig.spec.json",
+      "!{projectRoot}/jest.config.[jt]s",
+      "!{projectRoot}/src/test-setup.[jt]s",
+      "!{projectRoot}/test-setup.[jt]s",
+      "!{projectRoot}/biome.json"
+    ],
+    "sharedGlobals": [
+      {
+        "runtime": "node --version"
+      }
+    ]
+  },
   "release": {
     "changelog": {
       "workspaceChangelog": false,
@@ -60,6 +77,9 @@
           }
         }
       }
+    },
+    "version": {
+      "useLegacyVersioning": true
     }
   },
   "tasksRunnerOptions": {
@@ -72,8 +92,7 @@
     }
   },
   "useInferencePlugins": false,
-  "defaultBase": "main",
-  "useLegacyCache": true,
+  "defaultBase": "next",
   "generatorOptions": {
     "preserveLocalDependencyProtocols": true
   }

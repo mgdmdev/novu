@@ -1,15 +1,14 @@
-import sinon from 'sinon';
-import { expect } from 'chai';
-import { ChannelCTATypeEnum } from '@novu/shared';
-import { ChannelTypeEnum, MessageRepository } from '@novu/dal';
-import { AnalyticsService } from '@novu/application-generic';
-
 import { BadRequestException } from '@nestjs/common';
-import { GetNotifications } from './get-notifications.usecase';
+import { AnalyticsService } from '@novu/application-generic';
+import { ChannelTypeEnum, MessageRepository } from '@novu/dal';
+import { ChannelCTATypeEnum } from '@novu/shared';
+import { expect } from 'chai';
+import sinon from 'sinon';
 import { GetSubscriber } from '../../../subscribers/usecases/get-subscriber';
-import type { GetNotificationsCommand } from './get-notifications.command';
-import { mapToDto } from '../../utils/notification-mapper';
 import { AnalyticsEventsEnum } from '../../utils';
+import { mapToDto } from '../../utils/notification-mapper';
+import type { GetNotificationsCommand } from './get-notifications.command';
+import { GetNotifications } from './get-notifications.usecase';
 
 const mockSubscriber: any = { _id: '123', subscriberId: 'test-mockSubscriber' };
 const mockMessages: any = [
@@ -17,6 +16,7 @@ const mockMessages: any = [
     _id: '_id',
     content: '',
     read: false,
+    seen: false,
     archived: false,
     createdAt: new Date(),
     lastReadAt: new Date(),
@@ -127,8 +127,11 @@ describe('GetNotifications', () => {
     expect(result.filter).to.deep.equal({
       tags: command.tags,
       read: command.read,
+      data: command.data,
       archived: command.archived,
       snoozed: command.snoozed,
+      severity: command.severity,
+      seen: command.seen,
     });
     expect(result.hasMore).to.be.false;
     expect(analyticsServiceMock.mixpanelTrack.calledOnce).to.be.true;

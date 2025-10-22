@@ -14,11 +14,10 @@ import {
   ControlsMetadataDto$outboundSchema,
 } from "./controlsmetadatadto.js";
 import {
-  JSONSchemaDto,
-  JSONSchemaDto$inboundSchema,
-  JSONSchemaDto$Outbound,
-  JSONSchemaDto$outboundSchema,
-} from "./jsonschemadto.js";
+  ResourceOriginEnum,
+  ResourceOriginEnum$inboundSchema,
+  ResourceOriginEnum$outboundSchema,
+} from "./resourceoriginenum.js";
 import {
   StepIssuesDto,
   StepIssuesDto$inboundSchema,
@@ -30,11 +29,6 @@ import {
   StepTypeEnum$inboundSchema,
   StepTypeEnum$outboundSchema,
 } from "./steptypeenum.js";
-import {
-  WorkflowOriginEnum,
-  WorkflowOriginEnum$inboundSchema,
-  WorkflowOriginEnum$outboundSchema,
-} from "./workfloworiginenum.js";
 
 export type StepResponseDto = {
   /**
@@ -42,9 +36,13 @@ export type StepResponseDto = {
    */
   controls: ControlsMetadataDto;
   /**
-   * JSON Schema for variables
+   * Control values for the step (alias for controls.values)
    */
-  variables: JSONSchemaDto;
+  controlValues?: { [k: string]: any } | undefined;
+  /**
+   * JSON Schema for variables, follows the JSON Schema standard
+   */
+  variables: { [k: string]: any };
   /**
    * Unique identifier of the step
    */
@@ -66,9 +64,9 @@ export type StepResponseDto = {
    */
   type: StepTypeEnum;
   /**
-   * Origin of the workflow
+   * Origin of the layout
    */
-  origin: WorkflowOriginEnum;
+  origin: ResourceOriginEnum;
   /**
    * Workflow identifier
    */
@@ -90,13 +88,14 @@ export const StepResponseDto$inboundSchema: z.ZodType<
   unknown
 > = z.object({
   controls: ControlsMetadataDto$inboundSchema,
-  variables: JSONSchemaDto$inboundSchema,
+  controlValues: z.record(z.any()).optional(),
+  variables: z.record(z.any()),
   stepId: z.string(),
   _id: z.string(),
   name: z.string(),
   slug: z.string(),
   type: StepTypeEnum$inboundSchema,
-  origin: WorkflowOriginEnum$inboundSchema,
+  origin: ResourceOriginEnum$inboundSchema,
   workflowId: z.string(),
   workflowDatabaseId: z.string(),
   issues: StepIssuesDto$inboundSchema.optional(),
@@ -109,7 +108,8 @@ export const StepResponseDto$inboundSchema: z.ZodType<
 /** @internal */
 export type StepResponseDto$Outbound = {
   controls: ControlsMetadataDto$Outbound;
-  variables: JSONSchemaDto$Outbound;
+  controlValues?: { [k: string]: any } | undefined;
+  variables: { [k: string]: any };
   stepId: string;
   _id: string;
   name: string;
@@ -128,13 +128,14 @@ export const StepResponseDto$outboundSchema: z.ZodType<
   StepResponseDto
 > = z.object({
   controls: ControlsMetadataDto$outboundSchema,
-  variables: JSONSchemaDto$outboundSchema,
+  controlValues: z.record(z.any()).optional(),
+  variables: z.record(z.any()),
   stepId: z.string(),
   id: z.string(),
   name: z.string(),
   slug: z.string(),
   type: StepTypeEnum$outboundSchema,
-  origin: WorkflowOriginEnum$outboundSchema,
+  origin: ResourceOriginEnum$outboundSchema,
   workflowId: z.string(),
   workflowDatabaseId: z.string(),
   issues: StepIssuesDto$outboundSchema.optional(),

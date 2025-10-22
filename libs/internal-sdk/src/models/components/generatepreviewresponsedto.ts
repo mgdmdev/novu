@@ -110,44 +110,47 @@ export type Result5 = {
   preview?: SmsRenderOutput | undefined;
 };
 
-export const GeneratePreviewResponseDtoResultType = {
+export const GeneratePreviewResponseDtoResult4Type = {
   InApp: "in_app",
+} as const;
+export type GeneratePreviewResponseDtoResult4Type = ClosedEnum<
+  typeof GeneratePreviewResponseDtoResult4Type
+>;
+
+export type Result4 = {
+  type?: GeneratePreviewResponseDtoResult4Type | undefined;
+  preview?: InAppRenderOutput | undefined;
+};
+
+export const GeneratePreviewResponseDtoResult3Type = {
+  Email: "email",
+} as const;
+export type GeneratePreviewResponseDtoResult3Type = ClosedEnum<
+  typeof GeneratePreviewResponseDtoResult3Type
+>;
+
+export type Three = {
+  type?: GeneratePreviewResponseDtoResult3Type | undefined;
+  preview?: EmailRenderOutput | undefined;
+};
+
+export const GeneratePreviewResponseDtoResultType = {
+  Email: "email",
 } as const;
 export type GeneratePreviewResponseDtoResultType = ClosedEnum<
   typeof GeneratePreviewResponseDtoResultType
 >;
 
-export type Result4 = {
-  type?: GeneratePreviewResponseDtoResultType | undefined;
-  preview?: InAppRenderOutput | undefined;
-};
-
-export const ResultType = {
-  Email: "email",
-} as const;
-export type ResultType = ClosedEnum<typeof ResultType>;
-
-export type Three = {
-  type?: ResultType | undefined;
-  preview?: EmailRenderOutput | undefined;
-};
-
-export const GeneratePreviewResponseDtoResult2Type = {
-  Email: "email",
-} as const;
-export type GeneratePreviewResponseDtoResult2Type = ClosedEnum<
-  typeof GeneratePreviewResponseDtoResult2Type
->;
-
 export type Two = {
-  type?: GeneratePreviewResponseDtoResult2Type | undefined;
+  type?: GeneratePreviewResponseDtoResultType | undefined;
   preview?: EmailRenderOutput | undefined;
 };
 
 /**
  * Preview result
  */
-export type Result =
+export type GeneratePreviewResponseDtoResult =
+  | { [k: string]: any }
   | Two
   | Three
   | Result4
@@ -155,8 +158,7 @@ export type Result =
   | Six
   | Seven
   | Eight
-  | Nine
-  | { [k: string]: any };
+  | Nine;
 
 export type GeneratePreviewResponseDto = {
   /**
@@ -164,11 +166,22 @@ export type GeneratePreviewResponseDto = {
    */
   previewPayloadExample: PreviewPayloadDto;
   /**
+   * The payload schema that was used to generate the preview payload example
+   */
+  schema?: { [k: string]: any } | null | undefined;
+  /**
    * Preview result
    */
-  result: Two | Three | Result4 | Result5 | Six | Seven | Eight | Nine | {
-    [k: string]: any;
-  };
+  result:
+    | { [k: string]: any }
+    | Two
+    | Three
+    | Result4
+    | Result5
+    | Six
+    | Seven
+    | Eight
+    | Nine;
 };
 
 /** @internal */
@@ -536,33 +549,33 @@ export function result5FromJSON(
 }
 
 /** @internal */
-export const GeneratePreviewResponseDtoResultType$inboundSchema:
-  z.ZodNativeEnum<typeof GeneratePreviewResponseDtoResultType> = z.nativeEnum(
-    GeneratePreviewResponseDtoResultType,
+export const GeneratePreviewResponseDtoResult4Type$inboundSchema:
+  z.ZodNativeEnum<typeof GeneratePreviewResponseDtoResult4Type> = z.nativeEnum(
+    GeneratePreviewResponseDtoResult4Type,
   );
 
 /** @internal */
-export const GeneratePreviewResponseDtoResultType$outboundSchema:
-  z.ZodNativeEnum<typeof GeneratePreviewResponseDtoResultType> =
-    GeneratePreviewResponseDtoResultType$inboundSchema;
+export const GeneratePreviewResponseDtoResult4Type$outboundSchema:
+  z.ZodNativeEnum<typeof GeneratePreviewResponseDtoResult4Type> =
+    GeneratePreviewResponseDtoResult4Type$inboundSchema;
 
 /**
  * @internal
  * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
  */
-export namespace GeneratePreviewResponseDtoResultType$ {
-  /** @deprecated use `GeneratePreviewResponseDtoResultType$inboundSchema` instead. */
+export namespace GeneratePreviewResponseDtoResult4Type$ {
+  /** @deprecated use `GeneratePreviewResponseDtoResult4Type$inboundSchema` instead. */
   export const inboundSchema =
-    GeneratePreviewResponseDtoResultType$inboundSchema;
-  /** @deprecated use `GeneratePreviewResponseDtoResultType$outboundSchema` instead. */
+    GeneratePreviewResponseDtoResult4Type$inboundSchema;
+  /** @deprecated use `GeneratePreviewResponseDtoResult4Type$outboundSchema` instead. */
   export const outboundSchema =
-    GeneratePreviewResponseDtoResultType$outboundSchema;
+    GeneratePreviewResponseDtoResult4Type$outboundSchema;
 }
 
 /** @internal */
 export const Result4$inboundSchema: z.ZodType<Result4, z.ZodTypeDef, unknown> =
   z.object({
-    type: GeneratePreviewResponseDtoResultType$inboundSchema.optional(),
+    type: GeneratePreviewResponseDtoResult4Type$inboundSchema.optional(),
     preview: InAppRenderOutput$inboundSchema.optional(),
   });
 
@@ -578,7 +591,7 @@ export const Result4$outboundSchema: z.ZodType<
   z.ZodTypeDef,
   Result4
 > = z.object({
-  type: GeneratePreviewResponseDtoResultType$outboundSchema.optional(),
+  type: GeneratePreviewResponseDtoResult4Type$outboundSchema.optional(),
   preview: InAppRenderOutput$outboundSchema.optional(),
 });
 
@@ -610,28 +623,33 @@ export function result4FromJSON(
 }
 
 /** @internal */
-export const ResultType$inboundSchema: z.ZodNativeEnum<typeof ResultType> = z
-  .nativeEnum(ResultType);
+export const GeneratePreviewResponseDtoResult3Type$inboundSchema:
+  z.ZodNativeEnum<typeof GeneratePreviewResponseDtoResult3Type> = z.nativeEnum(
+    GeneratePreviewResponseDtoResult3Type,
+  );
 
 /** @internal */
-export const ResultType$outboundSchema: z.ZodNativeEnum<typeof ResultType> =
-  ResultType$inboundSchema;
+export const GeneratePreviewResponseDtoResult3Type$outboundSchema:
+  z.ZodNativeEnum<typeof GeneratePreviewResponseDtoResult3Type> =
+    GeneratePreviewResponseDtoResult3Type$inboundSchema;
 
 /**
  * @internal
  * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
  */
-export namespace ResultType$ {
-  /** @deprecated use `ResultType$inboundSchema` instead. */
-  export const inboundSchema = ResultType$inboundSchema;
-  /** @deprecated use `ResultType$outboundSchema` instead. */
-  export const outboundSchema = ResultType$outboundSchema;
+export namespace GeneratePreviewResponseDtoResult3Type$ {
+  /** @deprecated use `GeneratePreviewResponseDtoResult3Type$inboundSchema` instead. */
+  export const inboundSchema =
+    GeneratePreviewResponseDtoResult3Type$inboundSchema;
+  /** @deprecated use `GeneratePreviewResponseDtoResult3Type$outboundSchema` instead. */
+  export const outboundSchema =
+    GeneratePreviewResponseDtoResult3Type$outboundSchema;
 }
 
 /** @internal */
 export const Three$inboundSchema: z.ZodType<Three, z.ZodTypeDef, unknown> = z
   .object({
-    type: ResultType$inboundSchema.optional(),
+    type: GeneratePreviewResponseDtoResult3Type$inboundSchema.optional(),
     preview: EmailRenderOutput$inboundSchema.optional(),
   });
 
@@ -647,7 +665,7 @@ export const Three$outboundSchema: z.ZodType<
   z.ZodTypeDef,
   Three
 > = z.object({
-  type: ResultType$outboundSchema.optional(),
+  type: GeneratePreviewResponseDtoResult3Type$outboundSchema.optional(),
   preview: EmailRenderOutput$outboundSchema.optional(),
 });
 
@@ -679,33 +697,33 @@ export function threeFromJSON(
 }
 
 /** @internal */
-export const GeneratePreviewResponseDtoResult2Type$inboundSchema:
-  z.ZodNativeEnum<typeof GeneratePreviewResponseDtoResult2Type> = z.nativeEnum(
-    GeneratePreviewResponseDtoResult2Type,
+export const GeneratePreviewResponseDtoResultType$inboundSchema:
+  z.ZodNativeEnum<typeof GeneratePreviewResponseDtoResultType> = z.nativeEnum(
+    GeneratePreviewResponseDtoResultType,
   );
 
 /** @internal */
-export const GeneratePreviewResponseDtoResult2Type$outboundSchema:
-  z.ZodNativeEnum<typeof GeneratePreviewResponseDtoResult2Type> =
-    GeneratePreviewResponseDtoResult2Type$inboundSchema;
+export const GeneratePreviewResponseDtoResultType$outboundSchema:
+  z.ZodNativeEnum<typeof GeneratePreviewResponseDtoResultType> =
+    GeneratePreviewResponseDtoResultType$inboundSchema;
 
 /**
  * @internal
  * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
  */
-export namespace GeneratePreviewResponseDtoResult2Type$ {
-  /** @deprecated use `GeneratePreviewResponseDtoResult2Type$inboundSchema` instead. */
+export namespace GeneratePreviewResponseDtoResultType$ {
+  /** @deprecated use `GeneratePreviewResponseDtoResultType$inboundSchema` instead. */
   export const inboundSchema =
-    GeneratePreviewResponseDtoResult2Type$inboundSchema;
-  /** @deprecated use `GeneratePreviewResponseDtoResult2Type$outboundSchema` instead. */
+    GeneratePreviewResponseDtoResultType$inboundSchema;
+  /** @deprecated use `GeneratePreviewResponseDtoResultType$outboundSchema` instead. */
   export const outboundSchema =
-    GeneratePreviewResponseDtoResult2Type$outboundSchema;
+    GeneratePreviewResponseDtoResultType$outboundSchema;
 }
 
 /** @internal */
 export const Two$inboundSchema: z.ZodType<Two, z.ZodTypeDef, unknown> = z
   .object({
-    type: GeneratePreviewResponseDtoResult2Type$inboundSchema.optional(),
+    type: GeneratePreviewResponseDtoResultType$inboundSchema.optional(),
     preview: EmailRenderOutput$inboundSchema.optional(),
   });
 
@@ -718,7 +736,7 @@ export type Two$Outbound = {
 /** @internal */
 export const Two$outboundSchema: z.ZodType<Two$Outbound, z.ZodTypeDef, Two> = z
   .object({
-    type: GeneratePreviewResponseDtoResult2Type$outboundSchema.optional(),
+    type: GeneratePreviewResponseDtoResultType$outboundSchema.optional(),
     preview: EmailRenderOutput$outboundSchema.optional(),
   });
 
@@ -750,21 +768,25 @@ export function twoFromJSON(
 }
 
 /** @internal */
-export const Result$inboundSchema: z.ZodType<Result, z.ZodTypeDef, unknown> = z
-  .union([
-    z.lazy(() => Two$inboundSchema),
-    z.lazy(() => Three$inboundSchema),
-    z.lazy(() => Result4$inboundSchema),
-    z.lazy(() => Result5$inboundSchema),
-    z.lazy(() => Six$inboundSchema),
-    z.lazy(() => Seven$inboundSchema),
-    z.lazy(() => Eight$inboundSchema),
-    z.lazy(() => Nine$inboundSchema),
-    z.record(z.any()),
-  ]);
+export const GeneratePreviewResponseDtoResult$inboundSchema: z.ZodType<
+  GeneratePreviewResponseDtoResult,
+  z.ZodTypeDef,
+  unknown
+> = z.union([
+  z.record(z.any()),
+  z.lazy(() => Two$inboundSchema),
+  z.lazy(() => Three$inboundSchema),
+  z.lazy(() => Result4$inboundSchema),
+  z.lazy(() => Result5$inboundSchema),
+  z.lazy(() => Six$inboundSchema),
+  z.lazy(() => Seven$inboundSchema),
+  z.lazy(() => Eight$inboundSchema),
+  z.lazy(() => Nine$inboundSchema),
+]);
 
 /** @internal */
-export type Result$Outbound =
+export type GeneratePreviewResponseDtoResult$Outbound =
+  | { [k: string]: any }
   | Two$Outbound
   | Three$Outbound
   | Result4$Outbound
@@ -772,15 +794,15 @@ export type Result$Outbound =
   | Six$Outbound
   | Seven$Outbound
   | Eight$Outbound
-  | Nine$Outbound
-  | { [k: string]: any };
+  | Nine$Outbound;
 
 /** @internal */
-export const Result$outboundSchema: z.ZodType<
-  Result$Outbound,
+export const GeneratePreviewResponseDtoResult$outboundSchema: z.ZodType<
+  GeneratePreviewResponseDtoResult$Outbound,
   z.ZodTypeDef,
-  Result
+  GeneratePreviewResponseDtoResult
 > = z.union([
+  z.record(z.any()),
   z.lazy(() => Two$outboundSchema),
   z.lazy(() => Three$outboundSchema),
   z.lazy(() => Result4$outboundSchema),
@@ -789,33 +811,38 @@ export const Result$outboundSchema: z.ZodType<
   z.lazy(() => Seven$outboundSchema),
   z.lazy(() => Eight$outboundSchema),
   z.lazy(() => Nine$outboundSchema),
-  z.record(z.any()),
 ]);
 
 /**
  * @internal
  * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
  */
-export namespace Result$ {
-  /** @deprecated use `Result$inboundSchema` instead. */
-  export const inboundSchema = Result$inboundSchema;
-  /** @deprecated use `Result$outboundSchema` instead. */
-  export const outboundSchema = Result$outboundSchema;
-  /** @deprecated use `Result$Outbound` instead. */
-  export type Outbound = Result$Outbound;
+export namespace GeneratePreviewResponseDtoResult$ {
+  /** @deprecated use `GeneratePreviewResponseDtoResult$inboundSchema` instead. */
+  export const inboundSchema = GeneratePreviewResponseDtoResult$inboundSchema;
+  /** @deprecated use `GeneratePreviewResponseDtoResult$outboundSchema` instead. */
+  export const outboundSchema = GeneratePreviewResponseDtoResult$outboundSchema;
+  /** @deprecated use `GeneratePreviewResponseDtoResult$Outbound` instead. */
+  export type Outbound = GeneratePreviewResponseDtoResult$Outbound;
 }
 
-export function resultToJSON(result: Result): string {
-  return JSON.stringify(Result$outboundSchema.parse(result));
+export function generatePreviewResponseDtoResultToJSON(
+  generatePreviewResponseDtoResult: GeneratePreviewResponseDtoResult,
+): string {
+  return JSON.stringify(
+    GeneratePreviewResponseDtoResult$outboundSchema.parse(
+      generatePreviewResponseDtoResult,
+    ),
+  );
 }
 
-export function resultFromJSON(
+export function generatePreviewResponseDtoResultFromJSON(
   jsonString: string,
-): SafeParseResult<Result, SDKValidationError> {
+): SafeParseResult<GeneratePreviewResponseDtoResult, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => Result$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'Result' from JSON`,
+    (x) => GeneratePreviewResponseDtoResult$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GeneratePreviewResponseDtoResult' from JSON`,
   );
 }
 
@@ -826,7 +853,9 @@ export const GeneratePreviewResponseDto$inboundSchema: z.ZodType<
   unknown
 > = z.object({
   previewPayloadExample: PreviewPayloadDto$inboundSchema,
+  schema: z.nullable(z.record(z.any())).optional(),
   result: z.union([
+    z.record(z.any()),
     z.lazy(() => Two$inboundSchema),
     z.lazy(() => Three$inboundSchema),
     z.lazy(() => Result4$inboundSchema),
@@ -835,14 +864,15 @@ export const GeneratePreviewResponseDto$inboundSchema: z.ZodType<
     z.lazy(() => Seven$inboundSchema),
     z.lazy(() => Eight$inboundSchema),
     z.lazy(() => Nine$inboundSchema),
-    z.record(z.any()),
   ]),
 });
 
 /** @internal */
 export type GeneratePreviewResponseDto$Outbound = {
   previewPayloadExample: PreviewPayloadDto$Outbound;
+  schema?: { [k: string]: any } | null | undefined;
   result:
+    | { [k: string]: any }
     | Two$Outbound
     | Three$Outbound
     | Result4$Outbound
@@ -850,8 +880,7 @@ export type GeneratePreviewResponseDto$Outbound = {
     | Six$Outbound
     | Seven$Outbound
     | Eight$Outbound
-    | Nine$Outbound
-    | { [k: string]: any };
+    | Nine$Outbound;
 };
 
 /** @internal */
@@ -861,7 +890,9 @@ export const GeneratePreviewResponseDto$outboundSchema: z.ZodType<
   GeneratePreviewResponseDto
 > = z.object({
   previewPayloadExample: PreviewPayloadDto$outboundSchema,
+  schema: z.nullable(z.record(z.any())).optional(),
   result: z.union([
+    z.record(z.any()),
     z.lazy(() => Two$outboundSchema),
     z.lazy(() => Three$outboundSchema),
     z.lazy(() => Result4$outboundSchema),
@@ -870,7 +901,6 @@ export const GeneratePreviewResponseDto$outboundSchema: z.ZodType<
     z.lazy(() => Seven$outboundSchema),
     z.lazy(() => Eight$outboundSchema),
     z.lazy(() => Nine$outboundSchema),
-    z.record(z.any()),
   ]),
 });
 

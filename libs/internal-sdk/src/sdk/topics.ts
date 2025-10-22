@@ -26,7 +26,12 @@ export class Topics extends ClientSDK {
   }
 
   /**
-   * Get topics list
+   * List all topics
+   *
+   * @remarks
+   * This api returns a paginated list of topics.
+   *     Topics can be filtered by **key**, **name**, or **includeCursor** to paginate through the list.
+   *     Checkout all available filters in the query section.
    */
   async list(
     request: operations.TopicsControllerListTopicsRequest,
@@ -40,26 +45,31 @@ export class Topics extends ClientSDK {
   }
 
   /**
-   * Create or update a topic
+   * Create a topic
    *
    * @remarks
-   * Creates a new topic if it does not exist, or updates an existing topic if it already exists
+   * Creates a new topic if it does not exist, or updates an existing topic if it already exists. Use ?failIfExists=true to prevent updates.
    */
   async create(
     createUpdateTopicRequestDto: components.CreateUpdateTopicRequestDto,
+    failIfExists?: boolean | undefined,
     idempotencyKey?: string | undefined,
     options?: RequestOptions,
   ): Promise<operations.TopicsControllerUpsertTopicResponse> {
     return unwrapAsync(topicsCreate(
       this,
       createUpdateTopicRequestDto,
+      failIfExists,
       idempotencyKey,
       options,
     ));
   }
 
   /**
-   * Get topic by key
+   * Retrieve a topic
+   *
+   * @remarks
+   * Retrieve a topic by its unique key identifier **topicKey**
    */
   async get(
     topicKey: string,
@@ -75,7 +85,10 @@ export class Topics extends ClientSDK {
   }
 
   /**
-   * Update topic by key
+   * Update a topic
+   *
+   * @remarks
+   * Update a topic name by its unique key identifier **topicKey**
    */
   async update(
     updateTopicRequestDto: components.UpdateTopicRequestDto,
@@ -93,7 +106,11 @@ export class Topics extends ClientSDK {
   }
 
   /**
-   * Delete topic by key
+   * Delete a topic
+   *
+   * @remarks
+   * Delete a topic by its unique key identifier **topicKey**.
+   *     This action is irreversible and will remove all subscriptions to the topic.
    */
   async delete(
     topicKey: string,

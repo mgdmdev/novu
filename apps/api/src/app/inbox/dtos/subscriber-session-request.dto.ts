@@ -1,10 +1,11 @@
-import { IsDefined, IsOptional, IsString, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
+import { IsDefined, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { ScheduleDto } from '../../shared/dtos/schedule';
 
 export class SubscriberSessionRequestDto {
   @IsString()
-  @IsDefined()
-  readonly applicationIdentifier: string;
+  @IsOptional()
+  readonly applicationIdentifier?: string;
 
   @IsString()
   @IsOptional()
@@ -20,6 +21,11 @@ export class SubscriberSessionRequestDto {
   @ValidateNested()
   @Type(() => SubscriberDto)
   readonly subscriber?: SubscriberDto | string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ScheduleDto)
+  readonly defaultSchedule?: ScheduleDto;
 }
 
 export class SubscriberDto {

@@ -1,12 +1,13 @@
 import { Accessor, createContext, createSignal, JSX, splitProps, useContext } from 'solid-js';
+import { useLocalization } from '../../context/LocalizationContext';
 import { useStyle } from '../../helpers';
 import { cn } from '../../helpers/utils';
-import { ArrowLeft } from '../../icons';
-import { ArrowRight } from '../../icons/ArrowRight';
+import { ArrowLeft as DefaultArrowLeft } from '../../icons';
+import { ArrowRight as DefaultArrowRight } from '../../icons/ArrowRight';
 import { AppearanceKey } from '../../types';
+import { IconRendererWrapper } from '../shared/IconRendererWrapper';
 import { Button } from './Button';
 import { Tooltip } from './Tooltip';
-import { useLocalization } from '../../context/LocalizationContext';
 
 type DatePickerContextType = {
   currentDate: Accessor<Date>;
@@ -67,7 +68,7 @@ export const DatePicker = (props: DatePickerProps) => {
         maxDays: () => props.maxDays,
       }}
     >
-      <div class={style('datePicker', cn('nt-p-2', local.class))} {...rest}>
+      <div class={style({ key: 'datePicker', className: cn('nt-p-2', local.class) })} {...rest}>
         {local.children}
       </div>
     </DatePickerContext.Provider>
@@ -79,6 +80,18 @@ export const DatePickerHeader = (props: DatePickerHeaderProps) => {
   const [local, rest] = splitProps(props, ['class', 'appearanceKey', 'children']);
   const style = useStyle();
   const { viewMonth, setViewMonth, currentDate, maxDays } = useDatePicker();
+
+  const prevIconClass = style({
+    key: 'datePickerControlPrevTrigger__icon',
+    className: 'nt-size-4 nt-text-foreground-alpha-700',
+    iconKey: 'arrowLeft',
+  });
+
+  const nextIconClass = style({
+    key: 'datePickerControlNextTrigger__icon',
+    className: 'nt-size-4 nt-text-foreground-alpha-700',
+    iconKey: 'arrowRight',
+  });
 
   const handlePrevMonth = () => {
     const date = new Date(viewMonth());
@@ -137,13 +150,13 @@ export const DatePickerHeader = (props: DatePickerHeaderProps) => {
 
   return (
     <div
-      class={style(
-        local.appearanceKey || 'datePickerControl',
-        cn(
+      class={style({
+        key: local.appearanceKey || 'datePickerControl',
+        className: cn(
           'nt-flex nt-items-center nt-justify-between nt-gap-1.5 nt-h-7 nt-p-1 nt-mb-2 nt-rounded-lg nt-bg-background',
           local.class
-        )
-      )}
+        ),
+      })}
       {...rest}
     >
       <Button
@@ -156,9 +169,18 @@ export const DatePickerHeader = (props: DatePickerHeaderProps) => {
         disabled={isPrevDisabled()}
         class="nt-flex nt-justify-center nt-items-center nt-gap-0.5 nt-w-5 nt-h-5 nt-p-0 nt-rounded-md nt-bg-background nt-shadow-[0px_1px_2px_0px_rgba(10,13,20,0.03)]"
       >
-        <ArrowLeft class={style('datePickerControlPrevTrigger__icon', 'nt-size-4 nt-text-foreground-alpha-700')} />
+        <IconRendererWrapper
+          iconKey="arrowLeft"
+          class={prevIconClass}
+          fallback={<DefaultArrowLeft class={prevIconClass} />}
+        />
       </Button>
-      <span class={style('datePickerHeaderMonth', 'nt-text-sm nt-font-medium nt-text-foreground-alpha-700')}>
+      <span
+        class={style({
+          key: 'datePickerHeaderMonth',
+          className: 'nt-text-sm nt-font-medium nt-text-foreground-alpha-700',
+        })}
+      >
         {viewMonth().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
       </span>
       <Button
@@ -171,7 +193,11 @@ export const DatePickerHeader = (props: DatePickerHeaderProps) => {
         disabled={isNextDisabled()}
         class="nt-flex nt-justify-center nt-items-center nt-gap-0.5 nt-w-5 nt-h-5 nt-p-0 nt-rounded-md nt-bg-background nt-shadow-[0px_1px_2px_0px_rgba(10,13,20,0.03)]"
       >
-        <ArrowRight class={style('datePickerControlNextTrigger__icon', 'nt-size-4 nt-text-foreground-alpha-700')} />
+        <IconRendererWrapper
+          iconKey="arrowRight"
+          class={nextIconClass}
+          fallback={<DefaultArrowRight class={nextIconClass} />}
+        />
       </Button>
     </div>
   );
@@ -184,7 +210,10 @@ export const DatePickerGrid = (props: DatePickerGridProps) => {
 
   return (
     <div
-      class={style(local.appearanceKey || 'datePickerGrid', cn('nt-w-full nt-grid nt-gap-1', local.class))}
+      class={style({
+        key: local.appearanceKey || 'datePickerGrid',
+        className: cn('nt-w-full nt-grid nt-gap-1', local.class),
+      })}
       {...rest}
     />
   );
@@ -197,10 +226,10 @@ export const DatePickerGridRow = (props: DatePickerGridRowProps) => {
 
   return (
     <div
-      class={style(
-        local.appearanceKey || 'datePickerGridRow',
-        cn('nt-grid nt-grid-cols-7 nt-gap-1 nt-w-full', local.class)
-      )}
+      class={style({
+        key: local.appearanceKey || 'datePickerGridRow',
+        className: cn('nt-grid nt-grid-cols-7 nt-gap-1 nt-w-full', local.class),
+      })}
       {...rest}
     />
   );
@@ -213,10 +242,10 @@ export const DatePickerGridHeader = (props: DatePickerGridHeaderProps) => {
 
   return (
     <div
-      class={style(
-        local.appearanceKey || 'datePickerGridHeader',
-        cn('nt-text-muted-foreground nt-text-[0.8rem] nt-font-normal nt-text-center', local.class)
-      )}
+      class={style({
+        key: local.appearanceKey || 'datePickerGridHeader',
+        className: cn('nt-text-muted-foreground nt-text-[0.8rem] nt-font-normal nt-text-center', local.class),
+      })}
       {...rest}
     />
   );
@@ -229,16 +258,16 @@ export const DatePickerGridCell = (props: DatePickerGridCellProps) => {
 
   return (
     <div
-      class={style(
-        local.appearanceKey || 'datePickerGridCell',
-        cn(
+      class={style({
+        key: local.appearanceKey || 'datePickerGridCell',
+        className: cn(
           'nt-p-0 nt-text-center nt-text-sm',
           'nt-has-[[data-in-range]]:bg-accent nt-has-[[data-in-range]]:first-of-type:rounded-l-md nt-has-[[data-in-range]]:last-of-type:rounded-r-md',
           'nt-has-[[data-range-end]]:rounded-r-md nt-has-[[data-range-start]]:rounded-l-md',
           'nt-has-[[data-outside-range][data-in-range]]:bg-accent/50',
           local.class
-        )
-      )}
+        ),
+      })}
       {...rest}
     />
   );
@@ -367,7 +396,10 @@ export const DatePickerCalendar = (props: DatePickerCalendarProps) => {
 
   return (
     <div
-      class={style(local.appearanceKey || 'datePickerCalendar', cn('nt-grid nt-grid-cols-7 nt-gap-1', local.class))}
+      class={style({
+        key: local.appearanceKey || 'datePickerCalendar',
+        className: cn('nt-grid nt-grid-cols-7 nt-gap-1', local.class),
+      })}
       onClick={(e) => e.stopPropagation()}
       {...rest}
     >

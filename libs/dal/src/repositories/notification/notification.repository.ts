@@ -1,4 +1,4 @@
-import { ChannelTypeEnum, StepTypeEnum } from '@novu/shared';
+import { ChannelTypeEnum, SeverityLevelEnum, StepTypeEnum } from '@novu/shared';
 import { subMonths, subWeeks } from 'date-fns';
 import { FilterQuery, QueryWithHelpers, Types } from 'mongoose';
 
@@ -31,8 +31,9 @@ export class NotificationRepository extends BaseRepository<
       channels?: ChannelTypeEnum[] | null;
       templates?: string[] | null;
       subscriberIds?: string[];
-      transactionId?: string;
+      transactionId?: string[];
       topicKey?: string;
+      severity?: SeverityLevelEnum[] | null;
       after?: string;
       before?: string;
     } = {},
@@ -43,12 +44,23 @@ export class NotificationRepository extends BaseRepository<
       _environmentId: environmentId,
     };
 
-    if (query.transactionId) {
-      requestQuery.transactionId = query.transactionId;
+    if (query.transactionId && query.transactionId.length > 0) {
+      requestQuery.transactionId = {
+        $in: query.transactionId,
+      };
     }
 
     if (query.topicKey) {
       requestQuery['topics.topicKey'] = query.topicKey;
+    }
+
+    const severityCondition: Array<FilterQuery<NotificationDBModel>> = [];
+    if (query.severity && query.severity?.length > 0) {
+      if (query.severity.includes(SeverityLevelEnum.NONE)) {
+        severityCondition.push({ severity: { $exists: false } }, { severity: { $in: query.severity } });
+      } else {
+        requestQuery.severity = { $in: query.severity };
+      }
     }
 
     if (query.after || query.before) {
@@ -80,6 +92,14 @@ export class NotificationRepository extends BaseRepository<
         $in: query.channels,
       };
     }
+    // combine all $or conditions properly
+    const orConditions: Array<FilterQuery<NotificationDBModel>> = [];
+    if (severityCondition.length > 0) {
+      orConditions.push({ $or: severityCondition });
+    }
+    if (orConditions.length > 0) {
+      requestQuery.$and = [...(requestQuery.$and ?? []), ...orConditions];
+    }
 
     const response = await this.populateFeed(this.MongooseModel.find(requestQuery), environmentId)
       .read('secondaryPreferred')
@@ -103,6 +123,38 @@ export class NotificationRepository extends BaseRepository<
 
     return this.mapEntity(
       await this.populateFeed(this.MongooseModel.findOne(requestQuery), _environmentId)
+    ) as unknown as NotificationFeedItemEntity;
+  }
+
+  public async findMetadataForTraces(
+    notificationId: string,
+    _environmentId: string,
+    _organizationId: string
+  ): Promise<NotificationFeedItemEntity> {
+    const requestQuery: FilterQuery<NotificationDBModel> = {
+      _id: notificationId,
+      _environmentId,
+      _organizationId,
+    };
+
+    return this.mapEntity(
+      await this.populateFeedWithoutExecutionDetails(this.MongooseModel.findOne(requestQuery), _environmentId)
+    ) as unknown as NotificationFeedItemEntity;
+  }
+
+  public async findNotificationMetadataOnly(
+    notificationId: string,
+    _environmentId: string,
+    _organizationId: string
+  ): Promise<NotificationFeedItemEntity> {
+    const requestQuery: FilterQuery<NotificationDBModel> = {
+      _id: notificationId,
+      _environmentId,
+      _organizationId,
+    };
+
+    return this.mapEntity(
+      await this.populateNotificationMetadataOnly(this.MongooseModel.findOne(requestQuery))
     ) as unknown as NotificationFeedItemEntity;
   }
 
@@ -134,7 +186,8 @@ export class NotificationRepository extends BaseRepository<
             $nin: [StepTypeEnum.TRIGGER],
           },
         },
-        select: 'createdAt digest payload overrides to tenant actorId providerId step status type updatedAt _parentId',
+        select:
+          'createdAt digest payload overrides to tenant actorId providerId step status type updatedAt _parentId scheduleExtensionsCount',
         populate: [
           {
             path: 'executionDetails',
@@ -148,6 +201,66 @@ export class NotificationRepository extends BaseRepository<
             select: '_parentId _templateId active filters template',
           },
         ],
+      });
+  }
+
+  private populateFeedWithoutExecutionDetails(
+    query: QueryWithHelpers<unknown, unknown, unknown>,
+    environmentId: string
+  ) {
+    return query
+      .populate({
+        options: {
+          readPreference: 'secondaryPreferred',
+        },
+        path: 'subscriber',
+        select: 'firstName _id lastName email phone subscriberId',
+      })
+      .populate({
+        options: {
+          readPreference: 'secondaryPreferred',
+        },
+        path: 'template',
+        select: '_id name triggers origin',
+      })
+      .populate({
+        options: {
+          readPreference: 'secondaryPreferred',
+          sort: { createdAt: 1, _parentId: 1 },
+        },
+        path: 'jobs',
+        match: {
+          _environmentId: new Types.ObjectId(environmentId),
+          type: {
+            $nin: [StepTypeEnum.TRIGGER],
+          },
+        },
+        select:
+          'createdAt digest payload overrides to tenant actorId providerId step status type updatedAt _parentId scheduleExtensionsCount',
+        populate: [
+          {
+            path: 'step',
+            select: '_parentId _templateId active filters template',
+          },
+        ],
+      });
+  }
+
+  private populateNotificationMetadataOnly(query: QueryWithHelpers<unknown, unknown, unknown>) {
+    return query
+      .populate({
+        options: {
+          readPreference: 'secondaryPreferred',
+        },
+        path: 'subscriber',
+        select: 'firstName _id lastName email phone subscriberId',
+      })
+      .populate({
+        options: {
+          readPreference: 'secondaryPreferred',
+        },
+        path: 'template',
+        select: '_id name triggers origin',
       });
   }
 

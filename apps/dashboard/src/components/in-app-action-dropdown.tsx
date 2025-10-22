@@ -1,3 +1,7 @@
+import merge from 'lodash.merge';
+import { ComponentProps } from 'react';
+import { useFormContext, useWatch } from 'react-hook-form';
+import { RiEdit2Line, RiExpandUpDownLine, RiForbid2Line } from 'react-icons/ri';
 import { Button } from '@/components/primitives/button';
 import {
   DropdownMenu,
@@ -15,18 +19,14 @@ import {
 } from '@/components/primitives/form/form';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/primitives/popover';
 import { Separator } from '@/components/primitives/separator';
+import { ControlInput } from '@/components/workflow-editor/control-input';
 import { URLInput } from '@/components/workflow-editor/url-input';
 import { useWorkflow } from '@/components/workflow-editor/workflow-provider';
 import { useParseVariables } from '@/hooks/use-parse-variables';
 import { inboxButtonVariants } from '@/utils/inbox';
 import { cn } from '@/utils/ui';
 import { urlTargetTypes } from '@/utils/url';
-import merge from 'lodash.merge';
-import { ComponentProps } from 'react';
-import { useFormContext, useWatch } from 'react-hook-form';
-import { RiEdit2Line, RiExpandUpDownLine, RiForbid2Line } from 'react-icons/ri';
 import { CompactButton } from './primitives/button-compact';
-import { ControlInput } from './primitives/control-input';
 import { InputRoot } from './primitives/input';
 
 const primaryActionKey = 'primaryAction';
@@ -51,7 +51,7 @@ export const InAppActionDropdown = ({ onMenuItemClick }: { onMenuItemClick?: () 
     <>
       <DropdownMenu modal={false}>
         <div className={cn('mt-3 flex items-center gap-1')}>
-          <div className="border-neutral-alpha-200 shadow-input relative flex min-h-10 w-full flex-wrap items-center justify-end gap-1 rounded-md border p-1">
+          <div className="border-neutral-alpha-200 shadow-input relative flex min-h-10 w-full flex-wrap items-center justify-end gap-1 rounded-md border bg-white p-1">
             {!primaryAction && !secondaryAction && (
               <Button
                 variant="secondary"
@@ -237,6 +237,7 @@ const ConfigureActionPopover = (
                       placeholder={title}
                       value={field.value}
                       onChange={field.onChange}
+                      enableTranslations
                     />
                   </InputRoot>
                 </FormControl>

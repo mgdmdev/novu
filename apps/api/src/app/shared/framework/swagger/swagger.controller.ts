@@ -1,16 +1,16 @@
-/* eslint-disable max-len */
-import { DocumentBuilder, OpenAPIObject, SwaggerModule } from '@nestjs/swagger';
-import packageJson from '../../../../../package.json';
 import { INestApplication } from '@nestjs/common';
+import { DocumentBuilder, OpenAPIObject, SwaggerModule } from '@nestjs/swagger';
 import { SecuritySchemeObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
+import { API_KEY_SWAGGER_SECURITY_NAME, BEARER_SWAGGER_SECURITY_NAME } from '@novu/application-generic';
+import packageJson from '../../../../../package.json';
+import metadata from '../../../../metadata';
+import { webhookEvents } from '../../../outbound-webhooks/webhooks.const';
 import { injectDocumentComponents } from './injection';
 import {
   overloadDocumentForSdkGeneration,
   removeEndpointsWithoutApiKey,
   sortOpenAPIDocument,
 } from './open.api.manipulation.component';
-import metadata from '../../../../metadata';
-import { API_KEY_SWAGGER_SECURITY_NAME, BEARER_SWAGGER_SECURITY_NAME } from '@novu/application-generic';
 
 export const API_KEY_SECURITY_DEFINITIONS: SecuritySchemeObject = {
   type: 'apiKey',
@@ -45,7 +45,7 @@ function buildBaseOptions() {
     )
     .addTag(
       'Subscribers',
-      `A subscriber in Novu represents someone who should receive a message. A subscriber’s profile information contains important attributes about the subscriber that will be used in messages (name, email). The subscriber object can contain other key-value pairs that can be used to further personalize your messages.`,
+      `A subscriber in Novu represents someone who should receive a message. A subscriber's profile information contains important attributes about the subscriber that will be used in messages (name, email). The subscriber object can contain other key-value pairs that can be used to further personalize your messages.`,
       { url: 'https://docs.novu.co/subscribers/subscribers' }
     )
     .addTag(
@@ -56,18 +56,30 @@ function buildBaseOptions() {
     .addTag(
       'Integrations',
       `With the help of the Integration Store, you can easily integrate your favorite delivery provider. During the runtime of the API, the Integrations Store is responsible for storing the configurations of all the providers.`,
-      { url: 'https://docs.novu.co/channels-and-providers/integration-store' }
+      { url: 'https://docs.novu.co/platform/integrations/overview' }
     )
-    // .addTag(
-    //   'Workflows',
-    //   `All notifications are sent via a workflow. Each workflow acts as a container for the logic and blueprint that are associated with a type of notification in your system.`,
-    //   { url: 'https://docs.novu.co/workflows' }
-    // )
+    .addTag(
+      'Workflows',
+      `All notifications are sent via a workflow. Each workflow acts as a container for the logic and blueprint that are associated with a type of notification in your system.`,
+      { url: 'https://docs.novu.co/workflows' }
+    )
     .addTag(
       'Messages',
       `A message in Novu represents a notification delivered to a recipient on a particular channel. Messages contain information about the request that triggered its delivery, a view of the data sent to the recipient, and a timeline of its lifecycle events. Learn more about messages.`,
       { url: 'https://docs.novu.co/workflows/messages' }
-    );
+    )
+    .addTag(
+      'Environments',
+      `Environments allow you to manage different stages of your application development lifecycle. Each environment has its own set of API keys and configurations, enabling you to separate development, staging, and production workflows.`,
+      { url: 'https://docs.novu.co/platform/environments' }
+    )
+    .addTag('Layouts', `Layouts are reusable wrappers for your email notifications.`, {
+      url: 'https://docs.novu.co/platform/workflow/layouts',
+    })
+    .addTag('Translations', `Used to localize your notifications to different languages.`, {
+      url: 'https://docs.novu.co/platform/workflow/translations',
+    });
+
   return options;
 }
 
@@ -82,13 +94,17 @@ function buildOpenApiBaseDocument(internalSdkGeneration: boolean | undefined) {
 }
 
 function buildFullDocumentWithPath(app: INestApplication<any>, baseDocument: Omit<OpenAPIObject, 'paths'>) {
+  // Define extraModels to ensure webhook payload DTOs are included in the schema definitions
+  // Add other relevant payload DTOs here if more webhooks are defined
+  const allWebhookPayloadDtos = [...new Set(webhookEvents.map((event) => event.payloadDto))];
+
   const document = injectDocumentComponents(
     SwaggerModule.createDocument(app, baseDocument, {
       operationIdFactory: (controllerKey: string, methodKey: string) => `${controllerKey}_${methodKey}`,
       deepScanRoutes: true,
       ignoreGlobalPrefix: false,
       include: [],
-      extraModels: [],
+      extraModels: [...allWebhookPayloadDtos], // Make sure payload DTOs are processed
     })
   );
   return document;
@@ -112,12 +128,88 @@ function publishLegacyOpenApiDoc(app: INestApplication<any>, document: OpenAPIOb
   });
 }
 
+/**
+ * Generates the `x-webhooks` section for the OpenAPI document based on defined events and DTOs.
+ * Follows the OpenAPI specification for webhooks: https://spec.openapis.org/oas/v3.1.0#fixed-fields-1:~:text=Webhooks%20Object
+ */
+function generateWebhookDefinitions(document: OpenAPIObject) {
+  const webhooksDefinition: Record<string, any> = {}; // Structure matches Path Item Object
+
+  webhookEvents.forEach((webhook) => {
+    // Assume the schema name matches the DTO class name (generated by Swagger)
+    const payloadSchemaRef = `#/components/schemas/${(webhook.payloadDto as Function).name}`;
+    const wrapperSchemaName = `${(webhook.payloadDto as Function).name}WebhookPayloadWrapper`; // Unique name for the wrapper schema
+
+    // Define the wrapper schema in components/schemas if it doesn't exist
+    if (document.components && !document.components.schemas?.[wrapperSchemaName]) {
+      if (!document.components.schemas) {
+        document.components.schemas = {};
+      }
+      document.components.schemas[wrapperSchemaName] = {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+            description: 'Unique identifier of the webhook event (evt_✱).',
+          },
+          type: { type: 'string', enum: [webhook.event], description: 'The type of the webhook event.' },
+          data: {
+            description: 'The actual event data payload.',
+            allOf: [{ $ref: payloadSchemaRef }], // Use allOf to correctly reference the payload schema
+          },
+          timestamp: { type: 'string', format: 'date-time', description: 'ISO timestamp of when the event occurred.' },
+          environmentId: { type: 'string', description: 'The ID of the environment associated with the event.' },
+          object: {
+            type: 'string',
+            enum: [webhook.objectType],
+            description: 'The type of object the event relates to.',
+          },
+        },
+        required: ['type', 'data', 'timestamp', 'environmentId', 'object'],
+      };
+    }
+
+    webhooksDefinition[webhook.event] = {
+      // This structure represents a Path Item Object, describing the webhook POST request.
+      post: {
+        summary: `Event: ${webhook.event}`,
+        description: `This webhook is triggered when a \`${webhook.objectType}\` event (\`${
+          webhook.event
+        }\`) occurs. The payload contains the details of the event. Configure your webhook endpoint URL in the Novu dashboard.`,
+        requestBody: {
+          description: `Webhook payload for the \`${webhook.event}\` event.`,
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: `#/components/schemas/${wrapperSchemaName}` }, // Reference the wrapper schema
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Acknowledges successful receipt of the webhook. No response body is expected.',
+          },
+          // Consider adding other responses (e.g., 4xx for signature validation failure, 5xx for processing errors)
+        },
+        tags: ['Webhooks'], // Assign to a 'Webhooks' tag
+      },
+    };
+  });
+
+  document['x-webhooks'] = webhooksDefinition;
+}
+
 export const setupSwagger = async (app: INestApplication, internalSdkGeneration?: boolean) => {
   await SwaggerModule.loadPluginMetadata(metadata);
   const baseDocument = buildOpenApiBaseDocument(internalSdkGeneration);
   const document = buildFullDocumentWithPath(app, baseDocument);
+
+  // Generate and add x-webhooks section FIRST
+  generateWebhookDefinitions(document);
+
   publishDeprecatedDocument(app, document);
   publishLegacyOpenApiDoc(app, document);
+
   return publishSdkSpecificDocumentAndReturnDocument(app, document, internalSdkGeneration);
 };
 
@@ -154,6 +246,7 @@ function publishSdkSpecificDocumentAndReturnDocument(
 ) {
   overloadNamingGuidelines(document);
   overloadGlobalSdkRetrySettings(document);
+
   let sdkDocument: OpenAPIObject = overloadDocumentForSdkGeneration(document, internalSdkGeneration);
   sdkDocument = sortOpenAPIDocument(sdkDocument);
   SwaggerModule.setup('openapi.sdk', app, sdkDocument, {

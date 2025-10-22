@@ -14,22 +14,22 @@ import {
   Res,
   UseInterceptors,
 } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
-import { ExternalApiAccessible } from '@novu/application-generic';
-import { ApiRateLimitCategoryEnum, UserSessionData } from '@novu/shared';
+import { ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ExternalApiAccessible, RequirePermissions } from '@novu/application-generic';
+import { ApiRateLimitCategoryEnum, PermissionsEnum, UserSessionData } from '@novu/shared';
 import { Response } from 'express';
+import { RequireAuthentication } from '../auth/framework/auth.decorator';
 import { ThrottlerCategory } from '../rate-limiting/guards/throttler.decorator';
 import { DirectionEnum } from '../shared/dtos/base-responses';
 import { ApiCommonResponses, ApiResponse } from '../shared/framework/response.decorator';
-import { UserAuthentication } from '../shared/framework/swagger/api.key.security';
 import { SdkGroupName, SdkMethodName } from '../shared/framework/swagger/sdk.decorators';
 import { UserSession } from '../shared/framework/user.decorator';
-import { CreateTopicSubscriptionsResponseDto } from './dtos/create-topic-subscriptions-response.dto';
 import { CreateTopicSubscriptionsRequestDto } from './dtos/create-topic-subscriptions.dto';
+import { CreateTopicSubscriptionsResponseDto } from './dtos/create-topic-subscriptions-response.dto';
 import { CreateUpdateTopicRequestDto } from './dtos/create-update-topic.dto';
 import { DeleteTopicResponseDto } from './dtos/delete-topic-response.dto';
-import { DeleteTopicSubscriptionsResponseDto } from './dtos/delete-topic-subscriptions-response.dto';
 import { DeleteTopicSubscriptionsRequestDto } from './dtos/delete-topic-subscriptions.dto';
+import { DeleteTopicSubscriptionsResponseDto } from './dtos/delete-topic-subscriptions-response.dto';
 import { ListTopicSubscriptionsQueryDto } from './dtos/list-topic-subscriptions-query.dto';
 import { ListTopicSubscriptionsResponseDto } from './dtos/list-topic-subscriptions-response.dto';
 import { ListTopicsQueryDto } from './dtos/list-topics-query.dto';
@@ -38,10 +38,10 @@ import { TopicResponseDto } from './dtos/topic-response.dto';
 import { UpdateTopicRequestDto } from './dtos/update-topic.dto';
 import { CreateTopicSubscriptionsCommand } from './usecases/create-topic-subscriptions/create-topic-subscriptions.command';
 import { CreateTopicSubscriptionsUsecase } from './usecases/create-topic-subscriptions/create-topic-subscriptions.usecase';
-import { DeleteTopicSubscriptionsCommand } from './usecases/delete-topic-subscriptions/delete-topic-subscriptions.command';
-import { DeleteTopicSubscriptionsUsecase } from './usecases/delete-topic-subscriptions/delete-topic-subscriptions.usecase';
 import { DeleteTopicCommand } from './usecases/delete-topic/delete-topic.command';
 import { DeleteTopicUseCase } from './usecases/delete-topic/delete-topic.usecase';
+import { DeleteTopicSubscriptionsCommand } from './usecases/delete-topic-subscriptions/delete-topic-subscriptions.command';
+import { DeleteTopicSubscriptionsUsecase } from './usecases/delete-topic-subscriptions/delete-topic-subscriptions.usecase';
 import { GetTopicCommand } from './usecases/get-topic/get-topic.command';
 import { GetTopicUseCase } from './usecases/get-topic/get-topic.usecase';
 import { ListTopicSubscriptionsCommand } from './usecases/list-topic-subscriptions/list-topic-subscriptions.command';
@@ -56,6 +56,7 @@ import { UpsertTopicUseCase } from './usecases/upsert-topic/upsert-topic.usecase
 @ThrottlerCategory(ApiRateLimitCategoryEnum.CONFIGURATION)
 @Controller({ path: '/topics', version: '2' })
 @UseInterceptors(ClassSerializerInterceptor)
+@RequireAuthentication()
 @ApiTags('Topics')
 @SdkGroupName('Topics')
 @ApiCommonResponses()
@@ -72,11 +73,16 @@ export class TopicsController {
   ) {}
 
   @Get('')
-  @UserAuthentication()
   @ExternalApiAccessible()
   @SdkMethodName('list')
-  @ApiOperation({ summary: 'Get topics list' })
+  @ApiOperation({
+    summary: 'List all topics',
+    description: `This api returns a paginated list of topics.
+    Topics can be filtered by **key**, **name**, or **includeCursor** to paginate through the list. 
+    Checkout all available filters in the query section.`,
+  })
   @ApiResponse(ListTopicsResponseDto)
+  @RequirePermissions(PermissionsEnum.TOPIC_READ)
   async listTopics(
     @UserSession() user: UserSessionData,
     @Query() query: ListTopicsQueryDto
@@ -99,19 +105,29 @@ export class TopicsController {
   }
 
   @Post('')
-  @UserAuthentication()
   @ExternalApiAccessible()
   @ApiOperation({
-    summary: 'Create or update a topic',
-    description: 'Creates a new topic if it does not exist, or updates an existing topic if it already exists',
+    summary: 'Create a topic',
+    description: `Creates a new topic if it does not exist, or updates an existing topic if it already exists. Use ?failIfExists=true to prevent updates.`,
   })
   @ApiResponse(TopicResponseDto, 201)
   @ApiResponse(TopicResponseDto, 200)
+  @ApiResponse(TopicResponseDto, 409, false, false, {
+    description: 'Topic already exists (when query param failIfExists=true)',
+  })
+  @ApiQuery({
+    name: 'failIfExists',
+    required: false,
+    type: Boolean,
+    description: 'If true, the request will fail if a topic with the same key already exists',
+  })
   @SdkMethodName('create')
+  @RequirePermissions(PermissionsEnum.TOPIC_WRITE)
   async upsertTopic(
     @UserSession() user: UserSessionData,
     @Body() body: CreateUpdateTopicRequestDto,
-    @Res({ passthrough: true }) response: Response
+    @Res({ passthrough: true }) response: Response,
+    @Query('failIfExists') failIfExists?: boolean
   ): Promise<TopicResponseDto> {
     const result = await this.upsertTopicUsecase.execute(
       UpsertTopicCommand.create({
@@ -120,6 +136,7 @@ export class TopicsController {
         userId: user._id,
         key: body.key,
         name: body.name,
+        failIfExists,
       })
     );
 
@@ -131,12 +148,15 @@ export class TopicsController {
   }
 
   @Get('/:topicKey')
-  @UserAuthentication()
   @ExternalApiAccessible()
   @SdkMethodName('get')
-  @ApiOperation({ summary: 'Get topic by key' })
+  @ApiOperation({
+    summary: 'Retrieve a topic',
+    description: `Retrieve a topic by its unique key identifier **topicKey**`,
+  })
   @ApiParam({ name: 'topicKey', description: 'The key identifier of the topic', type: String })
   @ApiResponse(TopicResponseDto, 200)
+  @RequirePermissions(PermissionsEnum.TOPIC_READ)
   async getTopic(@UserSession() user: UserSessionData, @Param('topicKey') topicKey: string): Promise<TopicResponseDto> {
     return await this.getTopicUsecase.execute(
       GetTopicCommand.create({
@@ -148,12 +168,15 @@ export class TopicsController {
   }
 
   @Patch('/:topicKey')
-  @UserAuthentication()
   @ExternalApiAccessible()
   @SdkMethodName('update')
-  @ApiOperation({ summary: 'Update topic by key' })
+  @ApiOperation({
+    summary: 'Update a topic',
+    description: `Update a topic name by its unique key identifier **topicKey**`,
+  })
   @ApiParam({ name: 'topicKey', description: 'The key identifier of the topic', type: String })
   @ApiResponse(TopicResponseDto, 200)
+  @RequirePermissions(PermissionsEnum.TOPIC_WRITE)
   async updateTopic(
     @UserSession() user: UserSessionData,
     @Param('topicKey') topicKey: string,
@@ -171,14 +194,18 @@ export class TopicsController {
   }
 
   @Delete('/:topicKey')
-  @UserAuthentication()
   @ExternalApiAccessible()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Delete topic by key' })
+  @ApiOperation({
+    summary: 'Delete a topic',
+    description: `Delete a topic by its unique key identifier **topicKey**. 
+    This action is irreversible and will remove all subscriptions to the topic.`,
+  })
   @ApiParam({ name: 'topicKey', description: 'The key identifier of the topic', type: String })
   @ApiResponse(DeleteTopicResponseDto, 200, false, true, {
     description: 'Topic deleted successfully',
   })
+  @RequirePermissions(PermissionsEnum.TOPIC_WRITE)
   async deleteTopic(
     @UserSession() user: UserSessionData,
     @Param('topicKey') topicKey: string
@@ -199,12 +226,16 @@ export class TopicsController {
   }
 
   @Get('/:topicKey/subscriptions')
-  @UserAuthentication()
   @ExternalApiAccessible()
   @SdkGroupName('Topics.Subscriptions')
-  @ApiOperation({ summary: 'List topic subscriptions' })
+  @ApiOperation({
+    summary: `List topic subscriptions`,
+    description: `List all subscriptions of subscribers for a topic.
+    Checkout all available filters in the query section.`,
+  })
   @ApiParam({ name: 'topicKey', description: 'The key identifier of the topic', type: String })
   @ApiResponse(ListTopicSubscriptionsResponseDto, 200)
+  @RequirePermissions(PermissionsEnum.TOPIC_READ)
   async listTopicSubscriptions(
     @UserSession() user: UserSessionData,
     @Param('topicKey') topicKey: string,
@@ -227,15 +258,19 @@ export class TopicsController {
   }
 
   @Post('/:topicKey/subscriptions')
-  @UserAuthentication()
   @ExternalApiAccessible()
   @SdkGroupName('Topics.Subscriptions')
   @SdkMethodName('create')
-  @ApiOperation({ summary: 'Create topic subscriptions, if the topic does not exist, it will be created.' })
+  @ApiOperation({
+    summary: 'Create topic subscriptions',
+    description: `This api will create subscription for subscriberIds for a topic. 
+      Its like subscribing to a common interest group. if topic does not exist, it will be created.`,
+  })
   @ApiParam({ name: 'topicKey', description: 'The key identifier of the topic', type: String })
   @ApiResponse(CreateTopicSubscriptionsResponseDto, 201, false, true, {
     description: 'Subscriptions created successfully',
   })
+  @RequirePermissions(PermissionsEnum.TOPIC_WRITE)
   async createTopicSubscriptions(
     @UserSession() user: UserSessionData,
     @Param('topicKey') topicKey: string,
@@ -270,15 +305,18 @@ export class TopicsController {
   }
 
   @Delete('/:topicKey/subscriptions')
-  @UserAuthentication()
   @ExternalApiAccessible()
   @SdkGroupName('Topics.Subscriptions')
   @SdkMethodName('delete')
-  @ApiOperation({ summary: 'Delete topic subscriptions' })
+  @ApiOperation({
+    summary: 'Delete topic subscriptions',
+    description: 'Delete subscriptions for subscriberIds for a topic.',
+  })
   @ApiParam({ name: 'topicKey', description: 'The key identifier of the topic', type: String })
   @ApiResponse(DeleteTopicSubscriptionsResponseDto, 200, false, false, {
     description: 'Subscriptions deleted successfully',
   })
+  @RequirePermissions(PermissionsEnum.TOPIC_WRITE)
   async deleteTopicSubscriptions(
     @UserSession() user: UserSessionData,
     @Param('topicKey') topicKey: string,

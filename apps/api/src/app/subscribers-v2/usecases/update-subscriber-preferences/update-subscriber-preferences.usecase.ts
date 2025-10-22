@@ -1,14 +1,12 @@
-import { plainToInstance } from 'class-transformer';
 import { Injectable } from '@nestjs/common';
-import { PreferenceLevelEnum } from '@novu/shared';
 import { GetWorkflowByIdsCommand, GetWorkflowByIdsUseCase } from '@novu/application-generic';
-
-import { UpdateSubscriberPreferencesCommand } from './update-subscriber-preferences.command';
-import { UpdatePreferences } from '../../../inbox/usecases/update-preferences/update-preferences.usecase';
+import { PreferenceLevelEnum, WorkflowCriticalityEnum } from '@novu/shared';
+import { plainToInstance } from 'class-transformer';
 import { UpdatePreferencesCommand } from '../../../inbox/usecases/update-preferences/update-preferences.command';
-import { GetSubscriberPreferences } from '../get-subscriber-preferences/get-subscriber-preferences.usecase';
-
+import { UpdatePreferences } from '../../../inbox/usecases/update-preferences/update-preferences.usecase';
 import { GetSubscriberPreferencesDto } from '../../dtos/get-subscriber-preferences.dto';
+import { GetSubscriberPreferences } from '../get-subscriber-preferences/get-subscriber-preferences.usecase';
+import { UpdateSubscriberPreferencesCommand } from './update-subscriber-preferences.command';
 
 @Injectable()
 export class UpdateSubscriberPreferences {
@@ -37,9 +35,10 @@ export class UpdateSubscriberPreferences {
         environmentId: command.environmentId,
         subscriberId: command.subscriberId,
         level: command.workflowIdOrInternalId ? PreferenceLevelEnum.TEMPLATE : PreferenceLevelEnum.GLOBAL,
-        workflowId,
+        workflowIdOrIdentifier: workflowId,
         includeInactiveChannels: false,
         ...command.channels,
+        schedule: command.schedule,
       })
     );
 
@@ -47,6 +46,7 @@ export class UpdateSubscriberPreferences {
       environmentId: command.environmentId,
       organizationId: command.organizationId,
       subscriberId: command.subscriberId,
+      criticality: WorkflowCriticalityEnum.NON_CRITICAL,
     });
 
     return plainToInstance(GetSubscriberPreferencesDto, {

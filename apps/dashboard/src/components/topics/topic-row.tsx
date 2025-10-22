@@ -1,3 +1,8 @@
+import { PermissionsEnum } from '@novu/shared';
+import { useQueryClient } from '@tanstack/react-query';
+import { ComponentProps, useState } from 'react';
+import { RiDeleteBin2Line, RiFileCopyLine, RiMore2Fill, RiPulseFill } from 'react-icons/ri';
+import { Link } from 'react-router-dom';
 import { ConfirmationModal } from '@/components/confirmation-modal';
 import { CompactButton } from '@/components/primitives/button-compact';
 import { CopyButton } from '@/components/primitives/copy-button';
@@ -12,11 +17,8 @@ import { Skeleton } from '@/components/primitives/skeleton';
 import { TableCell, TableRow } from '@/components/primitives/table';
 import { TimeDisplayHoverCard } from '@/components/time-display-hover-card';
 import { formatDateSimple } from '@/utils/format-date';
+import { Protect } from '@/utils/protect';
 import { QueryKeys } from '@/utils/query-keys';
-import { useQueryClient } from '@tanstack/react-query';
-import { ComponentProps, useState } from 'react';
-import { RiDeleteBin2Line, RiFileCopyLine, RiMore2Fill, RiPulseFill } from 'react-icons/ri';
-import { Link } from 'react-router-dom';
 import { useEnvironment } from '../../context/environment/hooks';
 import { buildRoute, ROUTES } from '../../utils/routes';
 import { cn } from '../../utils/ui';
@@ -119,29 +121,33 @@ export const TopicRow = ({ topic }: TopicRowProps) => {
                   <RiFileCopyLine />
                   Copy identifier
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild className="cursor-pointer">
-                  <Link
-                    to={
-                      buildRoute(ROUTES.ACTIVITY_FEED, {
-                        environmentSlug: currentEnvironment?.slug ?? '',
-                      }) +
-                      '?' +
-                      new URLSearchParams({ topicKey: topic.key }).toString()
-                    }
+                <Protect permission={PermissionsEnum.NOTIFICATION_READ}>
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <Link
+                      to={
+                        buildRoute(ROUTES.ACTIVITY_FEED, {
+                          environmentSlug: currentEnvironment?.slug ?? '',
+                        }) +
+                        '?' +
+                        new URLSearchParams({ topicKey: topic.key }).toString()
+                      }
+                    >
+                      <RiPulseFill />
+                      View activity
+                    </Link>
+                  </DropdownMenuItem>
+                </Protect>
+                <Protect permission={PermissionsEnum.TOPIC_WRITE}>
+                  <DropdownMenuItem
+                    className="text-destructive cursor-pointer"
+                    onClick={() => {
+                      setTimeout(() => setIsDeleteModalOpen(true), 0);
+                    }}
                   >
-                    <RiPulseFill />
-                    View activity
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="text-destructive cursor-pointer"
-                  onClick={() => {
-                    setTimeout(() => setIsDeleteModalOpen(true), 0);
-                  }}
-                >
-                  <RiDeleteBin2Line />
-                  Delete topic
-                </DropdownMenuItem>
+                    <RiDeleteBin2Line />
+                    Delete topic
+                  </DropdownMenuItem>
+                </Protect>
               </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>

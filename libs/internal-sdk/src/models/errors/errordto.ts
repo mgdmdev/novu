@@ -5,6 +5,7 @@
 import * as z from "zod";
 import { safeParse } from "../../lib/schemas.js";
 import { Result as SafeParseResult } from "../../types/fp.js";
+import { NovuError } from "./novuerror.js";
 import { SDKValidationError } from "./sdkvalidationerror.js";
 
 export type Five = string | number | boolean | { [k: string]: any };
@@ -15,10 +16,10 @@ export type Four = {};
  * Value that failed validation
  */
 export type Message =
-  | Four
   | string
   | number
   | boolean
+  | Four
   | Array<string | number | boolean | { [k: string]: any } | null>;
 
 export type ErrorDtoData = {
@@ -38,10 +39,10 @@ export type ErrorDtoData = {
    * Value that failed validation
    */
   message?:
-    | Four
     | string
     | number
     | boolean
+    | Four
     | Array<string | number | boolean | { [k: string]: any } | null>
     | null
     | undefined;
@@ -58,11 +59,7 @@ export type ErrorDtoData = {
   errorId?: string | undefined;
 };
 
-export class ErrorDto extends Error {
-  /**
-   * HTTP status code of the error response.
-   */
-  statusCode: number;
+export class ErrorDto extends NovuError {
   /**
    * Timestamp of when the error occurred.
    */
@@ -86,14 +83,15 @@ export class ErrorDto extends Error {
   /** The original data that was passed to this error instance. */
   data$: ErrorDtoData;
 
-  constructor(err: ErrorDtoData) {
+  constructor(
+    err: ErrorDtoData,
+    httpMeta: { response: Response; request: Request; body: string },
+  ) {
     const message = "message" in err && typeof err.message === "string"
       ? err.message
       : `API error occurred: ${JSON.stringify(err)}`;
-    super(message);
+    super(message, httpMeta);
     this.data$ = err;
-
-    this.statusCode = err.statusCode;
     this.timestamp = err.timestamp;
     this.path = err.path;
     if (err.ctx != null) this.ctx = err.ctx;
@@ -182,10 +180,10 @@ export function fourFromJSON(
 /** @internal */
 export const Message$inboundSchema: z.ZodType<Message, z.ZodTypeDef, unknown> =
   z.union([
-    z.lazy(() => Four$inboundSchema),
     z.string(),
     z.number(),
     z.boolean(),
+    z.lazy(() => Four$inboundSchema),
     z.array(
       z.nullable(
         z.union([z.string(), z.number(), z.boolean(), z.record(z.any())]),
@@ -195,10 +193,10 @@ export const Message$inboundSchema: z.ZodType<Message, z.ZodTypeDef, unknown> =
 
 /** @internal */
 export type Message$Outbound =
-  | Four$Outbound
   | string
   | number
   | boolean
+  | Four$Outbound
   | Array<string | number | boolean | { [k: string]: any } | null>;
 
 /** @internal */
@@ -207,10 +205,10 @@ export const Message$outboundSchema: z.ZodType<
   z.ZodTypeDef,
   Message
 > = z.union([
-  z.lazy(() => Four$outboundSchema),
   z.string(),
   z.number(),
   z.boolean(),
+  z.lazy(() => Four$outboundSchema),
   z.array(
     z.nullable(
       z.union([z.string(), z.number(), z.boolean(), z.record(z.any())]),
@@ -256,10 +254,10 @@ export const ErrorDto$inboundSchema: z.ZodType<
   path: z.string(),
   message: z.nullable(
     z.union([
-      z.lazy(() => Four$inboundSchema),
       z.string(),
       z.number(),
       z.boolean(),
+      z.lazy(() => Four$inboundSchema),
       z.array(
         z.nullable(
           z.union([z.string(), z.number(), z.boolean(), z.record(z.any())]),
@@ -269,9 +267,16 @@ export const ErrorDto$inboundSchema: z.ZodType<
   ).optional(),
   ctx: z.record(z.any()).optional(),
   errorId: z.string().optional(),
+  request$: z.instanceof(Request),
+  response$: z.instanceof(Response),
+  body$: z.string(),
 })
   .transform((v) => {
-    return new ErrorDto(v);
+    return new ErrorDto(v, {
+      request: v.request$,
+      response: v.response$,
+      body: v.body$,
+    });
   });
 
 /** @internal */
@@ -280,10 +285,10 @@ export type ErrorDto$Outbound = {
   timestamp: string;
   path: string;
   message?:
-    | Four$Outbound
     | string
     | number
     | boolean
+    | Four$Outbound
     | Array<string | number | boolean | { [k: string]: any } | null>
     | null
     | undefined;
@@ -304,10 +309,10 @@ export const ErrorDto$outboundSchema: z.ZodType<
     path: z.string(),
     message: z.nullable(
       z.union([
-        z.lazy(() => Four$outboundSchema),
         z.string(),
         z.number(),
         z.boolean(),
+        z.lazy(() => Four$outboundSchema),
         z.array(
           z.nullable(
             z.union([z.string(), z.number(), z.boolean(), z.record(z.any())]),

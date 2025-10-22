@@ -1,3 +1,11 @@
+import { Novu } from '@novu/api';
+import {
+  SubscriberPayloadDto,
+  TopicPayloadDto,
+  TopicResponseDto,
+  TriggerEventRequestDto,
+  TriggerRecipientsTypeEnum,
+} from '@novu/api/models/components';
 import { MessageRepository, NotificationRepository, NotificationTemplateEntity, SubscriberEntity } from '@novu/dal';
 import {
   ChannelTypeEnum,
@@ -11,15 +19,6 @@ import {
 } from '@novu/shared';
 import { SubscribersService, UserSession } from '@novu/testing';
 import { expect } from 'chai';
-
-import { Novu } from '@novu/api';
-import {
-  SubscriberPayloadDto,
-  TopicPayloadDto,
-  TopicResponseDto,
-  TriggerEventRequestDto,
-  TriggerRecipientsTypeEnum,
-} from '@novu/api/models/components';
 import { initNovuClassSdk } from '../../shared/helpers/e2e/sdk/e2e-sdk.helper';
 
 describe('Topic Trigger Event #novu-v2', () => {
@@ -178,6 +177,87 @@ describe('Topic Trigger Event #novu-v2', () => {
       );
 
       expect(secondSubscriberEmails.length).to.equal(1);
+    });
+
+    it('should exclude specific subscribers from topic using exclude array', async () => {
+      const excludedSubscriber = firstSubscriber;
+      const toWithExclude = [
+        {
+          type: TriggerRecipientsTypeEnum.Topic,
+          topicKey: createdTopicDto.key,
+          exclude: [excludedSubscriber.subscriberId],
+        },
+      ];
+
+      await novuClient.trigger(buildTriggerRequestPayload(template, toWithExclude));
+
+      await session.waitForJobCompletion(template._id);
+
+      const excludedSubscriberNotifications = await notificationRepository.findBySubscriberId(
+        session.environment._id,
+        excludedSubscriber._id
+      );
+      expect(excludedSubscriberNotifications.length).to.equal(0);
+
+      const excludedSubscriberMessages = await messageRepository.findBySubscriberChannel(
+        session.environment._id,
+        excludedSubscriber._id,
+        ChannelTypeEnum.IN_APP
+      );
+      expect(excludedSubscriberMessages.length).to.equal(0);
+
+      const excludedSubscriberEmails = await messageRepository.findBySubscriberChannel(
+        session.environment._id,
+        excludedSubscriber._id,
+        ChannelTypeEnum.EMAIL
+      );
+      expect(excludedSubscriberEmails.length).to.equal(0);
+
+      const secondSubscriberNotifications = await notificationRepository.findBySubscriberId(
+        session.environment._id,
+        secondSubscriber._id
+      );
+      expect(secondSubscriberNotifications.length).to.equal(1);
+
+      const secondSubscriberMessages = await messageRepository.findBySubscriberChannel(
+        session.environment._id,
+        secondSubscriber._id,
+        ChannelTypeEnum.IN_APP
+      );
+      expect(secondSubscriberMessages.length).to.equal(1);
+
+      const secondSubscriberEmails = await messageRepository.findBySubscriberChannel(
+        session.environment._id,
+        secondSubscriber._id,
+        ChannelTypeEnum.EMAIL
+      );
+      expect(secondSubscriberEmails.length).to.equal(1);
+    });
+
+    it('should exclude multiple subscribers from topic using exclude array', async () => {
+      const toWithExclude = [
+        {
+          type: TriggerRecipientsTypeEnum.Topic,
+          topicKey: createdTopicDto.key,
+          exclude: [firstSubscriber.subscriberId, secondSubscriber.subscriberId],
+        },
+      ];
+
+      await novuClient.trigger(buildTriggerRequestPayload(template, toWithExclude));
+
+      await session.waitForJobCompletion(template._id);
+
+      const firstSubscriberNotifications = await notificationRepository.findBySubscriberId(
+        session.environment._id,
+        firstSubscriber._id
+      );
+      expect(firstSubscriberNotifications.length).to.equal(0);
+
+      const secondSubscriberNotifications = await notificationRepository.findBySubscriberId(
+        session.environment._id,
+        secondSubscriber._id
+      );
+      expect(secondSubscriberNotifications.length).to.equal(0);
     });
 
     it('should only exclude actor from topic, should send event if actor explicitly included', async () => {

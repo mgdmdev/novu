@@ -1,19 +1,36 @@
-import { parseStepVariables } from '@/utils/parseStepVariables';
 import { type JSONSchemaDefinition } from '@novu/shared';
+import { JSONSchema7 } from 'json-schema';
+import merge from 'lodash.merge';
 import { useMemo } from 'react';
+import { useDynamicPreviewSchema } from '@/hooks/use-dynamic-preview-schema';
+import { type EnhancedParsedVariables, parseStepVariables } from '@/utils/parseStepVariables';
 
-export function useParseVariables(schema?: JSONSchemaDefinition, digestStepId?: string) {
+export function useParseVariables(
+  schema?: JSONSchemaDefinition | JSONSchema7,
+  digestStepId?: string,
+  isPayloadSchemaEnabled?: boolean
+): EnhancedParsedVariables {
+  const previewSchema = useDynamicPreviewSchema();
+
   const parsedVariables = useMemo(() => {
-    return schema
-      ? parseStepVariables(schema, { digestStepId })
+    /**
+     * Combine static and dynamic schemas to get all variables available in preview
+     * schema - the schema created by combining the workflow schema + used variables in control values
+     * preview schema - combination of ^schema + preview data (only available in step editor context)
+     */
+    const mergedSchema = schema ? merge({}, schema, previewSchema) : schema;
+
+    return mergedSchema
+      ? parseStepVariables(mergedSchema, { digestStepId, isPayloadSchemaEnabled })
       : {
           variables: [],
           namespaces: [],
           primitives: [],
           arrays: [],
+          enhancedVariables: [],
           isAllowedVariable: () => false,
         };
-  }, [schema, digestStepId]);
+  }, [schema, digestStepId, isPayloadSchemaEnabled, previewSchema]);
 
   return parsedVariables;
 }

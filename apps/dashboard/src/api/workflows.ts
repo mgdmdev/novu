@@ -37,6 +37,8 @@ export const getWorkflows = async ({
   offset,
   orderBy,
   orderDirection,
+  tags,
+  status,
 }: {
   environment: IEnvironment;
   limit: number;
@@ -44,6 +46,8 @@ export const getWorkflows = async ({
   query: string;
   orderBy?: string;
   orderDirection?: string;
+  tags?: string[];
+  status?: string[];
 }): Promise<ListWorkflowResponse> => {
   const params = new URLSearchParams({
     limit: limit.toString(),
@@ -57,6 +61,18 @@ export const getWorkflows = async ({
 
   if (orderDirection) {
     params.append('orderDirection', orderDirection.toUpperCase());
+  }
+
+  if (tags && tags.length > 0) {
+    for (const tag of tags) {
+      params.append('tags[]', tag);
+    }
+  }
+
+  if (status && status.length > 0) {
+    for (const s of status) {
+      params.append('status[]', s);
+    }
   }
 
   const { data } = await getV2<{ data: ListWorkflowResponse }>(`/workflows?${params.toString()}`, { environment });
@@ -83,19 +99,21 @@ export async function triggerWorkflow({
   name,
   payload,
   to,
+  context,
 }: {
   environment: IEnvironment;
   name: string;
   payload: unknown;
   to: unknown;
+  context?: unknown;
 }) {
   return post<{ data: { transactionId?: string } }>(`/events/trigger`, {
     environment,
     body: {
       name,
       to,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       payload: { ...(payload ?? {}), __source: (payload as any)?.__source ?? 'dashboard' },
+      context: context ?? undefined,
     },
   });
 }

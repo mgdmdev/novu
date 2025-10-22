@@ -1,34 +1,133 @@
-import { ApiExtraModels, ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsEnum, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { ApiExtraModels, ApiProperty, ApiPropertyOptional, getSchemaPath } from '@nestjs/swagger';
+import { SeverityLevelEnum, StepTypeEnum, WorkflowCreationSourceEnum } from '@novu/shared';
 import { Type } from 'class-transformer';
-import { WorkflowCreationSourceEnum } from '@novu/shared';
-import { StepUpsertDto } from './create-step.dto';
+import { IsArray, IsEnum, IsOptional, IsString, Matches, ValidateNested } from 'class-validator';
+import {
+  ChatControlDto,
+  CustomControlDto,
+  DelayControlDto,
+  DigestControlDto,
+  EmailControlDto,
+  InAppControlDto,
+  PushControlDto,
+  SmsControlDto,
+  ThrottleControlDto,
+} from './controls';
+import {
+  BaseStepConfigDto,
+  ChatStepUpsertDto,
+  CustomStepUpsertDto,
+  DelayStepUpsertDto,
+  DigestStepUpsertDto,
+  EmailStepUpsertDto,
+  InAppStepUpsertDto,
+  PushStepUpsertDto,
+  SmsStepUpsertDto,
+  ThrottleStepUpsertDto,
+} from './create-step.dto';
 import { PreferencesRequestDto } from './preferences.request.dto';
 import { WorkflowCommonsFields } from './workflow-commons.dto';
 
-@ApiExtraModels(StepUpsertDto)
+@ApiExtraModels(
+  InAppStepUpsertDto,
+  EmailStepUpsertDto,
+  SmsStepUpsertDto,
+  PushStepUpsertDto,
+  ChatStepUpsertDto,
+  DelayStepUpsertDto,
+  DigestStepUpsertDto,
+  ThrottleStepUpsertDto,
+  CustomStepUpsertDto,
+  InAppControlDto,
+  EmailControlDto,
+  SmsControlDto,
+  PushControlDto,
+  ChatControlDto,
+  DelayControlDto,
+  DigestControlDto,
+  ThrottleControlDto,
+  CustomControlDto
+)
 export class CreateWorkflowDto extends WorkflowCommonsFields {
   @ApiProperty({ description: 'Unique identifier for the workflow' })
   @IsString()
+  @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, {
+    message: 'must be a valid slug format (lowercase letters, numbers, and hyphens only)',
+  })
   workflowId: string;
 
   @ApiProperty({
     description: 'Steps of the workflow',
-    type: StepUpsertDto,
-    isArray: true,
+    type: 'array',
+    items: {
+      oneOf: [
+        { $ref: getSchemaPath(InAppStepUpsertDto) },
+        { $ref: getSchemaPath(EmailStepUpsertDto) },
+        { $ref: getSchemaPath(SmsStepUpsertDto) },
+        { $ref: getSchemaPath(PushStepUpsertDto) },
+        { $ref: getSchemaPath(ChatStepUpsertDto) },
+        { $ref: getSchemaPath(DelayStepUpsertDto) },
+        { $ref: getSchemaPath(DigestStepUpsertDto) },
+        { $ref: getSchemaPath(ThrottleStepUpsertDto) },
+        { $ref: getSchemaPath(CustomStepUpsertDto) },
+      ],
+      discriminator: {
+        propertyName: 'type',
+        mapping: {
+          [StepTypeEnum.IN_APP]: getSchemaPath(InAppStepUpsertDto),
+          [StepTypeEnum.EMAIL]: getSchemaPath(EmailStepUpsertDto),
+          [StepTypeEnum.SMS]: getSchemaPath(SmsStepUpsertDto),
+          [StepTypeEnum.PUSH]: getSchemaPath(PushStepUpsertDto),
+          [StepTypeEnum.CHAT]: getSchemaPath(ChatStepUpsertDto),
+          [StepTypeEnum.DELAY]: getSchemaPath(DelayStepUpsertDto),
+          [StepTypeEnum.DIGEST]: getSchemaPath(DigestStepUpsertDto),
+          [StepTypeEnum.THROTTLE]: getSchemaPath(ThrottleStepUpsertDto),
+          [StepTypeEnum.CUSTOM]: getSchemaPath(CustomStepUpsertDto),
+        },
+      },
+    },
   })
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => StepUpsertDto)
-  steps: StepUpsertDto[];
+  @Type(() => BaseStepConfigDto, {
+    discriminator: {
+      property: 'type',
+      subTypes: [
+        { name: StepTypeEnum.IN_APP, value: InAppStepUpsertDto },
+        { name: StepTypeEnum.EMAIL, value: EmailStepUpsertDto },
+        { name: StepTypeEnum.SMS, value: SmsStepUpsertDto },
+        { name: StepTypeEnum.PUSH, value: PushStepUpsertDto },
+        { name: StepTypeEnum.CHAT, value: ChatStepUpsertDto },
+        { name: StepTypeEnum.DELAY, value: DelayStepUpsertDto },
+        { name: StepTypeEnum.DIGEST, value: DigestStepUpsertDto },
+        { name: StepTypeEnum.THROTTLE, value: ThrottleStepUpsertDto },
+        { name: StepTypeEnum.CUSTOM, value: CustomStepUpsertDto },
+      ],
+    },
+    keepDiscriminatorProperty: true,
+  })
+  steps: (
+    | InAppStepUpsertDto
+    | EmailStepUpsertDto
+    | SmsStepUpsertDto
+    | PushStepUpsertDto
+    | ChatStepUpsertDto
+    | DelayStepUpsertDto
+    | DigestStepUpsertDto
+    | ThrottleStepUpsertDto
+    | CustomStepUpsertDto
+  )[];
 
   @ApiProperty({
     description: 'Source of workflow creation',
     enum: WorkflowCreationSourceEnum,
     enumName: 'WorkflowCreationSourceEnum',
+    required: false,
+    default: WorkflowCreationSourceEnum.EDITOR,
   })
+  @IsOptional()
   @IsEnum(WorkflowCreationSourceEnum)
-  __source: WorkflowCreationSourceEnum;
+  __source?: WorkflowCreationSourceEnum;
 
   @ApiPropertyOptional({
     description: 'Workflow preferences',
@@ -38,4 +137,14 @@ export class CreateWorkflowDto extends WorkflowCommonsFields {
   @IsOptional()
   @Type(() => PreferencesRequestDto)
   preferences?: PreferencesRequestDto;
+
+  @ApiPropertyOptional({
+    description: 'Severity of the workflow',
+    required: false,
+    enum: [...Object.values(SeverityLevelEnum)],
+    enumName: 'SeverityLevelEnum',
+  })
+  @IsOptional()
+  @IsEnum(SeverityLevelEnum)
+  severity?: SeverityLevelEnum;
 }

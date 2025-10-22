@@ -1,3 +1,4 @@
+import { Novu } from '@novu/api';
 import {
   CreateWorkflowDto,
   DirectionEnum,
@@ -8,10 +9,9 @@ import {
 } from '@novu/api/models/components';
 import { UserSession } from '@novu/testing';
 import { expect } from 'chai';
-import { Novu } from '@novu/api';
 import { initNovuClassSdkInternalAuth } from '../../shared/helpers/e2e/sdk/e2e-sdk.helper';
 
-describe('List Workflows - /workflows (GET) #novu-v2', function () {
+describe('List Workflows - /workflows (GET) #novu-v2', () => {
   let session: UserSession;
   let novuClient: Novu;
 
@@ -29,12 +29,12 @@ describe('List Workflows - /workflows (GET) #novu-v2', function () {
         workflowIds.push(workflow.id);
       }
 
-      const { result: firstPage } = await novuClient.workflows.search({ limit: 10, offset: 0 });
+      const { result: firstPage } = await novuClient.workflows.list({ limit: 10, offset: 0 });
 
       expect(firstPage.workflows).to.have.length(10);
       expect(firstPage.totalCount).to.equal(15);
 
-      const { result: secondPage } = await novuClient.workflows.search({ limit: 10, offset: 10 });
+      const { result: secondPage } = await novuClient.workflows.list({ limit: 10, offset: 10 });
 
       expect(secondPage.workflows).to.have.length(5);
       expect(secondPage.totalCount).to.equal(15);
@@ -47,14 +47,14 @@ describe('List Workflows - /workflows (GET) #novu-v2', function () {
     });
 
     it('should correctly search workflows by name', async () => {
-      const searchTerm = 'SEARCHABLE_WORKFLOW';
+      const searchTerm = 'SEARCHABLE-WORKFLOW';
 
       // Create workflows with different names
-      await createWorkflow(`${searchTerm}_1`);
-      await createWorkflow(`${searchTerm}_2`);
+      await createWorkflow(`${searchTerm}-1`);
+      await createWorkflow(`${searchTerm}-2`);
       await createWorkflow('Different Workflow');
 
-      const { result } = await novuClient.workflows.search({ query: searchTerm });
+      const { result } = await novuClient.workflows.list({ query: searchTerm });
 
       expect(result.workflows).to.have.length(2);
       expect(result.workflows[0].name).to.include(searchTerm);
@@ -68,7 +68,7 @@ describe('List Workflows - /workflows (GET) #novu-v2', function () {
       await delay(100); // Ensure different creation times
       await createWorkflow('Second Workflow');
 
-      const { result } = await novuClient.workflows.search({});
+      const { result } = await novuClient.workflows.list({});
 
       expect(result.workflows[0].name).to.equal('Second Workflow');
       expect(result.workflows[1].name).to.equal('First Workflow');
@@ -79,7 +79,7 @@ describe('List Workflows - /workflows (GET) #novu-v2', function () {
       await delay(100); // Ensure different creation times
       await createWorkflow('Second Workflow');
 
-      const { result } = await novuClient.workflows.search({
+      const { result } = await novuClient.workflows.list({
         orderDirection: DirectionEnum.Asc,
         orderBy: WorkflowResponseDtoSortField.Name,
       });
@@ -94,7 +94,9 @@ describe('List Workflows - /workflows (GET) #novu-v2', function () {
       const workflowName = 'Test Workflow Structure';
       const createdWorkflow = await createWorkflow(workflowName);
 
-      const { result } = await novuClient.workflows.search({});
+      const { result } = await novuClient.workflows.list({});
+      const { result: topics } = await novuClient.topics.list({});
+      console.log(topics);
       const returnedWorkflow = result.workflows[0];
 
       expect(returnedWorkflow).to.include({

@@ -10,10 +10,10 @@ import {
   UserEntity,
 } from '@novu/dal';
 import { FeatureFlagsKeysEnum } from '@novu/shared';
+import { subscriberIdSchema } from '../../../events/utils/trigger-recipient-validation';
 import { SubscriberResponseDto } from '../../../subscribers/dtos';
 import { mapSubscriberEntityToDto } from '../list-subscribers/map-subscriber-entity-to.dto';
 import { PatchSubscriberCommand } from './patch-subscriber.command';
-import { subscriberIdSchema } from '../../../events/utils/trigger-recipient-validation';
 
 @Injectable()
 export class PatchSubscriber {
@@ -117,7 +117,7 @@ export class PatchSubscriber {
       this.logger.warn(`[Dry run] Invalid recipients: ${itemId}`);
     } else {
       throw new BadRequestException(
-        `Invalid subscriberId: ${itemId}, only alphanumeric characters, - and _ or valid email addresses are allowed`
+        `Invalid subscriberId: ${itemId}, only alphanumeric characters, -, _, and . or valid email addresses are allowed`
       );
     }
   }

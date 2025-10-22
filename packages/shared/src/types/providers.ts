@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/naming-convention */
+import { IConfigurations } from '../entities/integration/configuration.interface';
 
 export enum CredentialsKeyEnum {
   ApiKey = 'apiKey',
@@ -47,7 +47,11 @@ export enum CredentialsKeyEnum {
   channelId = 'channelId',
   phoneNumberIdentification = 'phoneNumberIdentification',
   ApiVersion = 'apiVersion',
+  AppSid = 'appSid',
+  SenderId = 'senderId',
 }
+
+export type ConfigurationKey = keyof IConfigurations;
 
 export enum EmailProviderIdEnum {
   EmailJS = 'emailjs',
@@ -106,6 +110,11 @@ export enum SmsProviderIdEnum {
   EazySms = 'eazy-sms',
   Mobishastra = 'mobishastra',
   AfroSms = 'afro-message',
+  // cspell:disable-next-line
+  Unifonic = 'unifonic',
+  // cspell:disable-next-line
+  Smsmode = 'smsmode',
+  IMedia = 'imedia',
 }
 
 export enum ChatProviderIdEnum {
@@ -119,6 +128,8 @@ export enum ChatProviderIdEnum {
   GetStream = 'getstream',
   RocketChat = 'rocket-chat',
   WhatsAppBusiness = 'whatsapp-business',
+  ChatWebhook = 'chat-webhook',
+  Novu = 'novu-slack',
 }
 
 export enum PushProviderIdEnum {

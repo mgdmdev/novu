@@ -1,13 +1,20 @@
-import { createHash } from 'crypto';
 import {
+  BadRequestException,
   forwardRef,
   Inject,
   Injectable,
   NotFoundException,
   UnauthorizedException,
-  BadRequestException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import {
+  AnalyticsService,
+  buildSubscriberKey,
+  buildUserKey,
+  CachedResponse,
+  IAuthService,
+  Instrument,
+} from '@novu/application-generic';
 
 import {
   EnvironmentEntity,
@@ -21,6 +28,7 @@ import {
   UserRepository,
 } from '@novu/dal';
 import {
+  ALL_PERMISSIONS,
   ApiAuthSchemeEnum,
   AuthenticateContext,
   AuthProviderEnum,
@@ -29,19 +37,11 @@ import {
   normalizeEmail,
   UserSessionData,
 } from '@novu/shared';
-
-import {
-  AnalyticsService,
-  buildSubscriberKey,
-  buildUserKey,
-  CachedResponse,
-  IAuthService,
-  Instrument,
-} from '@novu/application-generic';
-import { SwitchOrganization } from '../usecases/switch-organization/switch-organization.usecase';
-import { SwitchOrganizationCommand } from '../usecases/switch-organization/switch-organization.command';
-import { CreateUser } from '../../user/usecases/create-user/create-user.usecase';
+import { createHash } from 'crypto';
 import { CreateUserCommand } from '../../user/usecases/create-user/create-user.command';
+import { CreateUser } from '../../user/usecases/create-user/create-user.usecase';
+import { SwitchOrganizationCommand } from '../usecases/switch-organization/switch-organization.command';
+import { SwitchOrganization } from '../usecases/switch-organization/switch-organization.usecase';
 
 @Injectable()
 export class CommunityAuthService implements IAuthService {
@@ -154,7 +154,6 @@ export class CommunityAuthService implements IAuthService {
 
       const dbUser = await this.userRepository.findById(user._id);
       if (!dbUser) throw new BadRequestException('User not found');
-      // eslint-disable-next-line no-param-reassign
       user = dbUser;
     }
 
@@ -189,10 +188,10 @@ export class CommunityAuthService implements IAuthService {
       lastName: user.lastName || undefined,
       email: user.email,
       profilePicture: user.profilePicture || undefined,
-      roles: [MemberRoleEnum.ADMIN],
+      roles: [MemberRoleEnum.OSS_ADMIN],
+      permissions: ALL_PERMISSIONS,
       organizationId: environment?._organizationId || '',
       environmentId: environment?._id || '',
-      exp: 0,
       scheme: ApiAuthSchemeEnum.API_KEY,
     };
   }

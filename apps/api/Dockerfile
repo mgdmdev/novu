@@ -1,4 +1,16 @@
-FROM ghcr.io/novuhq/novu/base:1.0.0 AS dev
+FROM node:20-alpine3.19 AS dev_base
+RUN apk add --no-cache g++ make py3-pip
+ENV NX_DAEMON=false
+
+# Install global dependencies
+RUN npm --no-update-notifier --no-fund --global install pm2 pnpm@10.16.1&& \
+    pnpm --version
+
+# Set non-root user
+USER 1000
+WORKDIR /usr/src/app
+
+FROM dev_base AS dev
 ARG PACKAGE_PATH
 
 COPY --chown=1000:1000 ./meta .
@@ -35,7 +47,7 @@ WORKDIR /usr/src/app
 RUN rm -rf node_modules && pnpm recursive exec -- rm -rf ./src ./node_modules
 
 # ------- PRODUCTION BUILD ----------
-FROM ghcr.io/novuhq/novu/base:1.0.0 AS prod
+FROM dev_base AS prod
 
 ARG PACKAGE_PATH
 
@@ -57,4 +69,4 @@ RUN --mount=type=cache,id=pnpm-store-api,target=/root/.pnpm-store\
 ENV NEW_RELIC_NO_CONFIG_FILE=true
 
 WORKDIR /usr/src/app/apps/api
-ENTRYPOINT [ "sh", "-c", "node dist/dotenvcreate.mjs -s=novu/api -r=$NOVU_REGION -e=$NOVU_ENTERPRISE -v=$NODE_ENV && pm2-runtime start dist/main.js -i max" ]
+ENTRYPOINT [ "sh", "-c", "node dist/dotenvcreate.mjs -s=novu/api -r=$NOVU_REGION -e=$NOVU_ENTERPRISE -v=$NODE_ENV -h=$IS_SELF_HOSTED && pm2-runtime start dist/main.js -i max" ]

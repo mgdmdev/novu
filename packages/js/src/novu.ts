@@ -5,7 +5,9 @@ import { Notifications } from './notifications';
 import { Preferences } from './preferences';
 import { Session } from './session';
 import type { NovuOptions, Subscriber } from './types';
-import { Socket } from './ws';
+import { buildSubscriber } from './ui/internal';
+import { createSocket } from './ws';
+import type { BaseSocketInterface } from './ws/base-socket';
 
 export class Novu implements Pick<NovuEventEmitter, 'on'> {
   #emitter: NovuEventEmitter;
@@ -14,7 +16,7 @@ export class Novu implements Pick<NovuEventEmitter, 'on'> {
 
   public readonly notifications: Notifications;
   public readonly preferences: Preferences;
-  public readonly socket: Socket;
+  public readonly socket: BaseSocketInterface;
 
   public on: <Key extends EventNames>(eventName: Key, listener: EventHandler<Events[Key]>) => () => void;
   /**
@@ -39,13 +41,15 @@ export class Novu implements Pick<NovuEventEmitter, 'on'> {
     this.#emitter = new NovuEventEmitter();
     this.#session = new Session(
       {
-        applicationIdentifier: options.applicationIdentifier,
+        applicationIdentifier: options.applicationIdentifier || '',
         subscriberHash: options.subscriberHash,
-        subscriber: buildSubscriber(options),
+        subscriber: buildSubscriber({ subscriberId: options.subscriberId, subscriber: options.subscriber }),
+        defaultSchedule: options.defaultSchedule,
       },
       this.#inboxService,
       this.#emitter
     );
+
     this.#session.initialize();
     this.notifications = new Notifications({
       useCache: options.useCache ?? true,
@@ -57,7 +61,7 @@ export class Novu implements Pick<NovuEventEmitter, 'on'> {
       inboxServiceInstance: this.#inboxService,
       eventEmitterInstance: this.#emitter,
     });
-    this.socket = new Socket({
+    this.socket = createSocket({
       socketUrl: options.socketUrl,
       eventEmitterInstance: this.#emitter,
       inboxServiceInstance: this.#inboxService,
@@ -79,16 +83,12 @@ export class Novu implements Pick<NovuEventEmitter, 'on'> {
       this.#emitter.off(eventName, listener);
     };
   }
-}
 
-function buildSubscriber(options: NovuOptions): Subscriber {
-  let subscriberObj: Subscriber;
-
-  if (options.subscriber) {
-    subscriberObj = typeof options.subscriber === 'string' ? { subscriberId: options.subscriber } : options.subscriber;
-  } else {
-    subscriberObj = { subscriberId: options.subscriberId as string };
+  public async changeSubscriber(options: { subscriber: Subscriber; subscriberHash?: string }): Promise<void> {
+    await this.#session.initialize({
+      applicationIdentifier: this.#session.applicationIdentifier || '',
+      subscriberHash: options.subscriberHash,
+      subscriber: options.subscriber,
+    });
   }
-
-  return subscriberObj;
 }

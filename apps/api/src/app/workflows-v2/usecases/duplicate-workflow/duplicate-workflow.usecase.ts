@@ -1,28 +1,29 @@
 import { Injectable } from '@nestjs/common';
-import { InstrumentUsecase } from '@novu/application-generic';
-
-import { PreferencesTypeEnum, WorkflowCreationSourceEnum, WorkflowOriginEnum } from '@novu/shared';
-import { PreferencesEntity, PreferencesRepository } from '@novu/dal';
-import { GetWorkflowCommand, GetWorkflowUseCase } from '../get-workflow';
-import { UpsertWorkflowCommand, UpsertWorkflowDataCommand, UpsertWorkflowUseCase } from '../upsert-workflow';
-import { DuplicateWorkflowCommand } from './duplicate-workflow.command';
-import {
-  DuplicateWorkflowDto,
-  StepResponseDto,
-  StepUpsertDto,
-  WorkflowPreferencesDto,
-  WorkflowResponseDto,
-} from '../../dtos';
+import { ModuleRef } from '@nestjs/core';
+import { InstrumentUsecase, PinoLogger } from '@novu/application-generic';
+import { LocalizationResourceEnum, PreferencesEntity, PreferencesRepository } from '@novu/dal';
+import { PreferencesTypeEnum, ResourceOriginEnum, WorkflowCreationSourceEnum } from '@novu/shared';
+import { DuplicateWorkflowDto, StepResponseDto, WorkflowPreferencesDto, WorkflowResponseDto } from '../../dtos';
 import { WorkflowNotDuplicableException } from '../../exceptions/workflow-not-duplicable-exception';
+import { GetWorkflowCommand, GetWorkflowUseCase } from '../get-workflow';
+import {
+  UpsertStepDataCommand,
+  UpsertWorkflowCommand,
+  UpsertWorkflowDataCommand,
+  UpsertWorkflowUseCase,
+} from '../upsert-workflow';
+import { DuplicateWorkflowCommand } from './duplicate-workflow.command';
 
-export const DUPLICABLE_WORKFLOW_ORIGINS = [WorkflowOriginEnum.NOVU_CLOUD];
+export const DUPLICABLE_WORKFLOW_ORIGINS = [ResourceOriginEnum.NOVU_CLOUD];
 
 @Injectable()
 export class DuplicateWorkflowUseCase {
   constructor(
     private getWorkflowUseCase: GetWorkflowUseCase,
     private preferencesRepository: PreferencesRepository,
-    private upsertWorkflowUseCase: UpsertWorkflowUseCase
+    private upsertWorkflowUseCase: UpsertWorkflowUseCase,
+    private moduleRef: ModuleRef,
+    private logger: PinoLogger
   ) {}
 
   @InstrumentUsecase()
@@ -41,12 +42,22 @@ export class DuplicateWorkflowUseCase {
     const preferences = await this.getWorkflowPreferences(workflow._id, command.user.environmentId);
     const duplicateWorkflowDto = await this.buildDuplicateWorkflowDto(workflow, command.overrides, preferences);
 
-    return await this.upsertWorkflowUseCase.execute(
+    const duplicatedWorkflow = await this.upsertWorkflowUseCase.execute(
       UpsertWorkflowCommand.create({
         workflowDto: duplicateWorkflowDto,
         user: command.user,
       })
     );
+
+    if (duplicatedWorkflow.isTranslationEnabled) {
+      await this.duplicateTranslationsForWorkflow({
+        sourceResourceId: workflow.workflowId,
+        targetResourceId: duplicatedWorkflow.workflowId,
+        command,
+      });
+    }
+
+    return duplicatedWorkflow;
   }
 
   private isDuplicable(workflow: WorkflowResponseDto): boolean {
@@ -63,18 +74,21 @@ export class DuplicateWorkflowUseCase {
       description: overrides.description ?? originWorkflow.description,
       tags: overrides.tags ?? originWorkflow.tags,
       active: false,
-      origin: WorkflowOriginEnum.NOVU_CLOUD,
+      origin: ResourceOriginEnum.NOVU_CLOUD,
       __source: WorkflowCreationSourceEnum.DASHBOARD,
-      steps: await this.mapStepsToDuplicate(originWorkflow.steps),
+      steps: this.mapStepsToDuplicate(originWorkflow.steps),
       preferences: this.mapPreferences(preferences),
+      isTranslationEnabled: overrides.isTranslationEnabled ?? originWorkflow.isTranslationEnabled,
     };
   }
 
-  private async mapStepsToDuplicate(steps: StepResponseDto[]): Promise<StepUpsertDto[]> {
+  private mapStepsToDuplicate(steps: StepResponseDto[]): UpsertStepDataCommand[] {
     return steps.map((step) => ({
       name: step.name ?? '',
       type: step.type,
-      controlValues: step.controls.values ?? {},
+      controlValues: step.controls.values ?? null,
+      stepId: step.stepId,
+      slug: step.slug,
     }));
   }
 
@@ -98,5 +112,46 @@ export class DuplicateWorkflowUseCase {
         $in: [PreferencesTypeEnum.WORKFLOW_RESOURCE, PreferencesTypeEnum.USER_WORKFLOW],
       },
     });
+  }
+
+  private async duplicateTranslationsForWorkflow({
+    sourceResourceId,
+    targetResourceId,
+    command,
+  }: {
+    sourceResourceId: string;
+    targetResourceId: string;
+    command: DuplicateWorkflowCommand;
+  }) {
+    const isEnterprise = process.env.NOVU_ENTERPRISE === 'true' || process.env.CI_EE_TEST === 'true';
+    const isSelfHosted = process.env.IS_SELF_HOSTED === 'true';
+
+    if (!isEnterprise || isSelfHosted) {
+      return;
+    }
+
+    try {
+      const duplicateLocales = this.moduleRef.get(require('@novu/ee-translation')?.DuplicateLocales, {
+        strict: false,
+      });
+
+      await duplicateLocales.execute({
+        sourceResourceId,
+        sourceResourceType: LocalizationResourceEnum.WORKFLOW,
+        targetResourceId,
+        organizationId: command.user.organizationId,
+        environmentId: command.user.environmentId,
+        userId: command.user._id,
+      });
+    } catch (error) {
+      this.logger.error(`Failed to duplicate translations for workflow`, {
+        sourceResourceId,
+        targetResourceId,
+        organizationId: command.user.organizationId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      throw error;
+    }
   }
 }

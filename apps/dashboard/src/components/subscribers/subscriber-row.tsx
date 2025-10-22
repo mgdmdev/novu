@@ -1,3 +1,8 @@
+import { ISubscriberResponseDto, PermissionsEnum } from '@novu/shared';
+import { ComponentProps, useState } from 'react';
+import { RiDeleteBin2Line, RiFileCopyLine, RiMore2Fill, RiPulseFill } from 'react-icons/ri';
+import { Link } from 'react-router-dom';
+import { ExternalToast } from 'sonner';
 import { ConfirmationModal } from '@/components/confirmation-modal';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/primitives/avatar';
 import { CompactButton } from '@/components/primitives/button-compact';
@@ -20,13 +25,9 @@ import TruncatedText from '@/components/truncated-text';
 import { useEnvironment } from '@/context/environment/hooks';
 import { useDeleteSubscriber } from '@/hooks/use-delete-subscriber';
 import { formatDateSimple } from '@/utils/format-date';
+import { Protect } from '@/utils/protect';
 import { buildRoute, ROUTES } from '@/utils/routes';
 import { cn } from '@/utils/ui';
-import { ISubscriberResponseDto } from '@novu/shared';
-import { ComponentProps, useState } from 'react';
-import { RiDeleteBin2Line, RiFileCopyLine, RiMore2Fill, RiPulseFill } from 'react-icons/ri';
-import { Link } from 'react-router-dom';
-import { ExternalToast } from 'sonner';
 import { useSubscribersUrlState } from './hooks/use-subscribers-url-state';
 
 const toastOptions: ExternalToast = {
@@ -183,29 +184,33 @@ export const SubscriberRow = ({ subscriber, subscribersCount, firstTwoSubscriber
                   <RiFileCopyLine />
                   Copy identifier
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild className="cursor-pointer">
-                  <Link
-                    to={
-                      buildRoute(ROUTES.ACTIVITY_FEED, {
-                        environmentSlug: currentEnvironment?.slug ?? '',
-                      }) +
-                      '?' +
-                      new URLSearchParams({ subscriberId: subscriber.subscriberId }).toString()
-                    }
+                <Protect permission={PermissionsEnum.NOTIFICATION_READ}>
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <Link
+                      to={
+                        buildRoute(ROUTES.ACTIVITY_FEED, {
+                          environmentSlug: currentEnvironment?.slug ?? '',
+                        }) +
+                        '?' +
+                        new URLSearchParams({ subscriberId: subscriber.subscriberId }).toString()
+                      }
+                    >
+                      <RiPulseFill />
+                      View activity
+                    </Link>
+                  </DropdownMenuItem>
+                </Protect>
+                <Protect permission={PermissionsEnum.SUBSCRIBER_WRITE}>
+                  <DropdownMenuItem
+                    className="text-destructive cursor-pointer"
+                    onClick={() => {
+                      setTimeout(() => setIsDeleteModalOpen(true), 0);
+                    }}
                   >
-                    <RiPulseFill />
-                    View activity
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="text-destructive cursor-pointer"
-                  onClick={() => {
-                    setTimeout(() => setIsDeleteModalOpen(true), 0);
-                  }}
-                >
-                  <RiDeleteBin2Line />
-                  Delete subscriber
-                </DropdownMenuItem>
+                    <RiDeleteBin2Line />
+                    Delete subscriber
+                  </DropdownMenuItem>
+                </Protect>
               </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>
